@@ -180,13 +180,6 @@ export function LandingPreview() {
             )}
           </button>
         </div>
-
-        {/* Demo Label */}
-        <div className="text-center mt-3">
-          <span className="text-xs text-theme-muted bg-theme-bg px-2 py-1 rounded-full border border-theme-border">
-            ✨ Demonstração interativa
-          </span>
-        </div>
       </div>
     </div>
   );

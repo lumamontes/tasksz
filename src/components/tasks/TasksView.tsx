@@ -7,6 +7,7 @@ import { useStore } from '@nanostores/react';
 import { $tasks, $selectedTaskId, selectTask, addTask, updateTask, deleteTask } from '../../stores/tasksStore';
 import { $settings } from '../../stores/settingsStore';
 import { TaskDetail } from './TaskDetail';
+import { TaskDetailEmpty } from './TaskDetailEmpty';
 import { TaskListPanel } from './TaskListPanel';
 import { TaskForm } from './TaskForm';
 import { useState } from 'react';
@@ -109,23 +110,9 @@ export function TasksView() {
           }`}
         >
           {selectedTaskId ? (
-            <TaskDetail />
+            <TaskDetail onDelete={handleDeleteTask} />
           ) : (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center max-w-md px-8">
-                <div className="w-16 h-16 mx-auto mb-6 bg-theme-sidebar rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-theme-text mb-2">
-                  Escolha uma tarefa
-                </h3>
-                <p className="text-theme-muted">
-                  Selecione uma tarefa na lista para ver os detalhes.
-                </p>
-              </div>
-            </div>
+            <TaskDetailEmpty />
           )}
         </div>
       </div>
@@ -149,7 +136,7 @@ export function TasksView() {
             </div>
             {/* Task Detail */}
             <div className="flex-1 overflow-y-auto">
-              <TaskDetail />
+              <TaskDetail onDelete={handleDeleteTask} />
             </div>
           </div>
         ) : (

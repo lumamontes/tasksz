@@ -211,3 +211,50 @@ export function reorderSubtasks(taskId: string, reorderedSubtasks: Subtask[]) {
   
   $subtasks.set([...otherSubtasks, ...reorderedWithNewOrder]);
 }
+
+// Calendar query functions
+/**
+ * Get tasks for a specific date (YYYY-MM-DD format)
+ * Includes both scheduled tasks and recurring tasks that match the date
+ */
+export function getTasksForDate(dateStr: string): Task[] {
+  const tasks = $tasks.get();
+  // Parse date string to get day of week (0 = Sunday, 6 = Saturday)
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const dayOfWeek = date.getDay();
+  
+  return tasks.filter(task => {
+    if (task.archived) return false;
+    
+    // Check if task is scheduled for this specific date
+    if (task.scheduledDate === dateStr) {
+      return true;
+    }
+    
+    // Check if task is recurring and matches this date
+    if (task.recurring) {
+      if (task.recurring.type === 'daily') {
+        return true; // Daily tasks appear every day
+      } else if (task.recurring.type === 'weekly' && task.recurring.daysOfWeek) {
+        return task.recurring.daysOfWeek.includes(dayOfWeek);
+      }
+    }
+    
+    return false;
+  });
+}
+
+/**
+ * Get count of tasks for a specific date (for calendar grid indicators)
+ */
+export function getTaskCountForDate(dateStr: string): number {
+  return getTasksForDate(dateStr).length;
+}
+
+/**
+ * Check if a date has any tasks (for calendar grid indicators)
+ */
+export function hasTasksForDate(dateStr: string): boolean {
+  return getTaskCountForDate(dateStr) > 0;
+}
