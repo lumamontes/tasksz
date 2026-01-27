@@ -3,9 +3,10 @@
  * Neurodivergent-friendly focus timer with Tailwind styling
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useStore } from '@nanostores/react';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import {
   $minutes,
   $seconds,
@@ -17,10 +18,10 @@ import {
   startCountdown,
   resetCountdown,
   nextMode,
-  initializeStore,
 } from '../stores/pomodoroStore';
 import { useStore as useSettingsStore } from '@nanostores/react';
 import { $settings } from '../stores/settingsStore';
+import { useStoreInit } from '../hooks/useStoreInit';
 
 export function PomodoroTimer() {
   const minutes = useStore($minutes);
@@ -31,9 +32,8 @@ export function PomodoroTimer() {
   const completedSessions = useStore($completedFocusSessions);
   const settings = useSettingsStore($settings);
 
-  useEffect(() => {
-    initializeStore();
-  }, []);
+  // Initialize pomodoro store
+  useStoreInit({ pomodoro: true });
 
   // Get current mode duration
   const getModeDuration = () => {
@@ -113,7 +113,7 @@ export function PomodoroTimer() {
   const nextModeInfo = getNextModeInfo();
 
   return (
-    <div className={`rounded-xl border border-theme-border p-6 transition-colors ${modeInfo.bgColor}`}>
+    <Card padding="lg" variant="panel" className={modeInfo.bgColor}>
       <div className="text-center">
         {/* Mode Header */}
         <div className="mb-6">
@@ -262,6 +262,6 @@ export function PomodoroTimer() {
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

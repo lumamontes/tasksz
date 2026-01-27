@@ -141,18 +141,19 @@ function migrateData(data: any) {
     }
   }
   
-  // Migrate tasks to add nextStep field and calendar fields
+  // Migrate tasks to add calendar fields
   if (data.tasks) {
     data.tasks = data.tasks.map((task: any) => {
-      if (task.nextStep === undefined) {
-        task.nextStep = undefined; // Optional field, no default needed
-      }
       // Add calendar fields if they don't exist
       if (task.scheduledDate === undefined) {
         task.scheduledDate = undefined;
       }
       if (task.recurring === undefined) {
         task.recurring = undefined;
+      }
+      // Remove nextStep field if it exists (deprecated)
+      if (task.nextStep !== undefined) {
+        delete task.nextStep;
       }
       return task;
     });

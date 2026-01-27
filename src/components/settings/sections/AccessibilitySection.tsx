@@ -19,7 +19,7 @@ export function AccessibilitySection() {
           <div>
             <div className="font-medium text-theme-text">Ativar modo foco</div>
             <div className="text-sm text-theme-muted">
-              Esconde distrações e mostra apenas a tarefa atual, próximo passo e pomodoro. Pressione <kbd className="px-1.5 py-0.5 bg-theme-bg text-theme-text rounded text-xs">F</kbd> para alternar rapidamente.
+              Esconde distrações e mostra apenas a tarefa atual, próxima subtarefa e pomodoro. Pressione <kbd className="px-1.5 py-0.5 bg-theme-bg text-theme-text rounded text-xs">F</kbd> para alternar rapidamente.
             </div>
           </div>
           <button

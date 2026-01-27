@@ -1,32 +1,64 @@
 /**
  * CalendarDayPanel Component
  * Right panel showing tasks for the selected day
+ * ND-safe: Clear separation, calm presentation, no pressure
  */
 
+import { useState, useMemo } from 'react';
 import { useStore } from '@nanostores/react';
-import { getTasksForDate, getTaskProgress, selectTask } from '../../stores/tasksStore';
+import { 
+  getScheduledTasksForDate, 
+  getRecurringTasksForDate,
+  getTaskProgress, 
+  selectTask,
+  updateTask 
+} from '../../stores/tasksStore';
 import { $settings, setCurrentSection } from '../../stores/settingsStore';
-import { $subtasks } from '../../stores/tasksStore';
 import { parseDateLocal, getTodayString } from '../../utils/dateUtils';
-import { useMemo } from 'react';
+import { CalendarAssignModal } from './CalendarAssignModal';
 
 interface CalendarDayPanelProps {
   dateStr: string | null; // YYYY-MM-DD
 }
 
+const WEEKDAYS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
 const MONTHS = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
 ];
 
+type FilterType = 'all' | 'scheduled' | 'routines';
+
 export function CalendarDayPanel({ dateStr }: CalendarDayPanelProps) {
   const settings = useStore($settings);
-  const subtasks = useStore($subtasks);
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [showAssignModal, setShowAssignModal] = useState(false);
 
-  const tasks = useMemo(() => {
+  // Separate scheduled tasks from recurring tasks
+  const scheduledTasks = useMemo(() => {
     if (!dateStr) return [];
-    return getTasksForDate(dateStr);
+    return getScheduledTasksForDate(dateStr);
   }, [dateStr]);
+
+  const recurringTasks = useMemo(() => {
+    if (!dateStr) return [];
+    return getRecurringTasksForDate(dateStr);
+  }, [dateStr]);
+
+  // Filter tasks based on selected filter
+  const displayedScheduledTasks = useMemo(() => {
+    if (filter === 'routines') return [];
+    return scheduledTasks;
+  }, [scheduledTasks, filter]);
+
+  const displayedRecurringTasks = useMemo(() => {
+    if (filter === 'scheduled') return [];
+    return recurringTasks;
+  }, [recurringTasks, filter]);
+
+  const hasAnyTasks = scheduledTasks.length > 0 || recurringTasks.length > 0;
+  const showScheduledSection = displayedScheduledTasks.length > 0 || filter === 'all';
+  const showRecurringSection = displayedRecurringTasks.length > 0 || filter === 'all';
 
   // Format date for display
   const formattedDate = useMemo(() => {
@@ -38,12 +70,12 @@ export function CalendarDayPanel({ dateStr }: CalendarDayPanelProps) {
     }
     
     const date = parseDateLocal(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    const weekday = WEEKDAYS[date.getDay()];
+    const day = date.getDate();
+    const month = MONTHS[date.getMonth()];
+    const year = date.getFullYear();
+    
+    return `${weekday}, ${day} de ${month} de ${year}`;
   }, [dateStr]);
 
   const handleTaskClick = (taskId: string) => {
@@ -52,10 +84,24 @@ export function CalendarDayPanel({ dateStr }: CalendarDayPanelProps) {
     selectTask(taskId);
   };
 
+  const handleUnassign = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    updateTask(taskId, { scheduledDate: undefined });
+  };
+
+  const transitionClass = settings.reduceMotion ? '' : 'transition-all duration-200';
+  const paddingClass = settings.density === 'compact' ? 'p-6' : 'p-8';
+  const spacingClass = settings.density === 'compact' ? 'space-y-2' : 'space-y-3';
+
   if (!dateStr) {
     return (
       <div className="h-full flex items-center justify-center bg-theme-panel">
-        <p className="text-theme-muted text-center px-8">
+        <p className={`text-theme-muted text-center px-8 ${
+          settings.fontScale === 'sm' ? 'text-sm' :
+          settings.fontScale === 'lg' ? 'text-base' :
+          settings.fontScale === 'xl' ? 'text-lg' :
+          'text-sm'
+        }`}>
           Selecione um dia para ver as tarefas associadas
         </p>
       </div>
@@ -63,108 +109,332 @@ export function CalendarDayPanel({ dateStr }: CalendarDayPanelProps) {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-theme-panel">
-      <div className="p-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-theme-text mb-1">
-            {formattedDate}
-          </h2>
-        </div>
-
-        {/* Tasks List */}
-        {tasks.length === 0 ? (
-          <div className="bg-theme-sidebar rounded-xl border border-theme-border p-12 text-center">
-            <svg 
-              className="mx-auto h-12 w-12 text-theme-muted mb-4" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" 
-              />
-            </svg>
-            <p className="text-theme-muted">
-              Nenhuma tarefa associada a esse dia.
-            </p>
+    <>
+      <div className="h-full overflow-y-auto bg-theme-panel">
+        <div className={paddingClass}>
+          {/* Header */}
+          <div className="mb-6">
+            <h2 className={`font-semibold text-theme-text mb-1 ${
+              settings.fontScale === 'sm' ? 'text-xl' :
+              settings.fontScale === 'lg' ? 'text-3xl' :
+              settings.fontScale === 'xl' ? 'text-4xl' :
+              'text-2xl'
+            }`}>
+              {formattedDate?.split(',')[0] || formattedDate}
+            </h2>
+            {formattedDate && formattedDate.includes(',') && (
+              <p className={`text-theme-muted ${
+                settings.fontScale === 'sm' ? 'text-xs' :
+                settings.fontScale === 'lg' ? 'text-sm' :
+                settings.fontScale === 'xl' ? 'text-base' :
+                'text-xs'
+              }`}>
+                {formattedDate.split(', ').slice(1).join(', ')}
+              </p>
+            )}
           </div>
-        ) : (
-          <div className="space-y-3">
-            {tasks.map((task) => {
-              const progress = getTaskProgress(task.id);
-              const isRecurring = !!task.recurring;
-              const isScheduled = !!task.scheduledDate;
 
-              return (
+          {/* Filter Chips */}
+          {hasAnyTasks && (
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full border ${
+                  filter === 'all'
+                    ? 'bg-theme-accent/10 border-theme-accent text-theme-text'
+                    : 'bg-theme-sidebar border-theme-border text-theme-muted hover:bg-theme-bg'
+                } ${transitionClass}`}
+              >
+                Tudo
+              </button>
+              {scheduledTasks.length > 0 && (
                 <button
-                  key={task.id}
-                  onClick={() => handleTaskClick(task.id)}
-                  className="w-full text-left p-4 bg-theme-sidebar border border-theme-border rounded-xl hover:border-theme-accent hover:bg-theme-bg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent group"
-                  aria-label={`Tarefa: ${task.title}${progress.total > 0 ? `, ${progress.completed} de ${progress.total} subtarefas concluídas` : ''}`}
+                  onClick={() => setFilter('scheduled')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full border ${
+                    filter === 'scheduled'
+                      ? 'bg-theme-accent/10 border-theme-accent text-theme-text'
+                      : 'bg-theme-sidebar border-theme-border text-theme-muted hover:bg-theme-bg'
+                  } ${transitionClass}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-medium text-theme-text group-hover:text-theme-accent transition-colors">
-                          {task.title}
-                        </h3>
-                        {isRecurring && (
-                          <span className="text-xs text-theme-muted bg-theme-bg px-2 py-0.5 rounded-full">
-                            {task.recurring.type === 'daily' ? 'Diária' : 'Semanal'}
-                          </span>
-                        )}
-                      </div>
-                      {task.description && (
-                        <p className="text-sm text-theme-muted line-clamp-2 mb-2">
-                          {task.description.replace(/<[^>]*>/g, '').substring(0, 100)}
-                          {task.description.length > 100 ? '...' : ''}
-                        </p>
-                      )}
-                      {settings.showProgressBars && progress.total > 0 && (
-                        <div className="mt-2">
-                          <div className="flex items-center justify-between text-xs text-theme-muted mb-1">
-                            <span>Progresso</span>
-                            <span>{progress.percentage}%</span>
-                          </div>
-                          <div className="w-full h-1.5 bg-theme-bg rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-theme-accent transition-all"
-                              style={{ 
-                                width: `${progress.percentage}%`,
-                                transitionDuration: settings.reduceMotion ? '0ms' : '300ms'
-                              }}
-                              aria-hidden="true"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <svg
-                      className="w-5 h-5 text-theme-muted group-hover:text-theme-accent transition-colors shrink-0 mt-0.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
+                  Somente hoje
                 </button>
-              );
-            })}
-          </div>
-        )}
+              )}
+              {recurringTasks.length > 0 && (
+                <button
+                  onClick={() => setFilter('routines')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full border ${
+                    filter === 'routines'
+                      ? 'bg-theme-accent/10 border-theme-accent text-theme-text'
+                      : 'bg-theme-sidebar border-theme-border text-theme-muted hover:bg-theme-bg'
+                  } ${transitionClass}`}
+                >
+                  Somente rotinas
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Tasks List */}
+          {!hasAnyTasks ? (
+            <div className={`bg-theme-sidebar rounded-xl border border-theme-border ${
+              settings.density === 'compact' ? 'p-8' : 'p-12'
+            } text-center`}>
+              <svg 
+                className="mx-auto h-12 w-12 text-theme-muted mb-4" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" 
+                />
+              </svg>
+              <p className={`text-theme-muted mb-4 ${
+                settings.fontScale === 'sm' ? 'text-sm' :
+                settings.fontScale === 'lg' ? 'text-base' :
+                settings.fontScale === 'xl' ? 'text-lg' :
+                'text-sm'
+              }`}>
+                Nenhuma tarefa associada a esse dia.
+              </p>
+              <button
+                onClick={() => setShowAssignModal(true)}
+                className={`px-4 py-2 text-sm font-medium text-theme-text bg-theme-sidebar hover:bg-theme-bg border border-theme-border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-accent ${transitionClass}`}
+              >
+                Associar uma tarefa
+              </button>
+            </div>
+          ) : (
+            <div className={spacingClass}>
+              {/* Scheduled Tasks Section */}
+              {showScheduledSection && (
+                <div className="mb-6">
+                  <h3 className={`font-medium text-theme-text mb-3 ${
+                    settings.fontScale === 'sm' ? 'text-sm' :
+                    settings.fontScale === 'lg' ? 'text-lg' :
+                    settings.fontScale === 'xl' ? 'text-xl' :
+                    'text-base'
+                  }`}>
+                    Tarefas do dia
+                  </h3>
+                  {displayedScheduledTasks.length === 0 ? (
+                    <p className={`text-theme-muted ${
+                      settings.fontScale === 'sm' ? 'text-xs' :
+                      settings.fontScale === 'lg' ? 'text-sm' :
+                      settings.fontScale === 'xl' ? 'text-base' :
+                      'text-xs'
+                    }`}>
+                      Nenhuma tarefa agendada para este dia.
+                    </p>
+                  ) : (
+                    <div className={spacingClass}>
+                      {displayedScheduledTasks.map((task) => {
+                        const progress = getTaskProgress(task.id);
+                        return (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            progress={progress}
+                            onTaskClick={handleTaskClick}
+                            onUnassign={handleUnassign}
+                            settings={settings}
+                            transitionClass={transitionClass}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recurring Tasks Section */}
+              {showRecurringSection && (
+                <div>
+                  <h3 className={`font-medium text-theme-text mb-3 ${
+                    settings.fontScale === 'sm' ? 'text-sm' :
+                    settings.fontScale === 'lg' ? 'text-lg' :
+                    settings.fontScale === 'xl' ? 'text-xl' :
+                    'text-base'
+                  }`}>
+                    Rotinas
+                  </h3>
+                  {displayedRecurringTasks.length === 0 ? (
+                    <p className={`text-theme-muted ${
+                      settings.fontScale === 'sm' ? 'text-xs' :
+                      settings.fontScale === 'lg' ? 'text-sm' :
+                      settings.fontScale === 'xl' ? 'text-base' :
+                      'text-xs'
+                    }`}>
+                      Nenhuma rotina para este dia.
+                    </p>
+                  ) : (
+                    <div className={spacingClass}>
+                      {displayedRecurringTasks.map((task) => {
+                        const progress = getTaskProgress(task.id);
+                        return (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            progress={progress}
+                            onTaskClick={handleTaskClick}
+                            onUnassign={undefined}
+                            settings={settings}
+                            transitionClass={transitionClass}
+                            isRecurring={true}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Assign Button */}
+              <div className="mt-6">
+                <button
+                  onClick={() => setShowAssignModal(true)}
+                  className={`w-full px-4 py-2 text-sm font-medium text-theme-text bg-theme-sidebar hover:bg-theme-bg border border-theme-border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-accent ${transitionClass}`}
+                >
+                  Associar uma tarefa
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Assign Modal */}
+      {showAssignModal && (
+        <CalendarAssignModal
+          dateStr={dateStr}
+          onClose={() => setShowAssignModal(false)}
+          onAssign={() => {
+            // Modal will close automatically after assignment
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// Task Row Component
+interface TaskRowProps {
+  task: any;
+  progress: { completed: number; total: number; percentage: number };
+  onTaskClick: (taskId: string) => void;
+  onUnassign?: (taskId: string, e: React.MouseEvent) => void;
+  settings: any;
+  transitionClass: string;
+  isRecurring?: boolean;
+}
+
+function TaskRow({ 
+  task, 
+  progress, 
+  onTaskClick, 
+  onUnassign,
+  settings,
+  transitionClass,
+  isRecurring = false 
+}: TaskRowProps) {
+  const paddingClass = settings.density === 'compact' ? 'p-3' : 'p-4';
+  
+  return (
+    <button
+      onClick={() => onTaskClick(task.id)}
+      className={`w-full text-left ${paddingClass} bg-theme-sidebar border border-theme-border rounded-xl hover:border-theme-accent hover:bg-theme-bg focus:outline-none focus:ring-2 focus:ring-theme-accent group ${transitionClass}`}
+      aria-label={`Tarefa: ${task.title}${progress.total > 0 ? `, ${progress.completed} de ${progress.total} subtarefas concluídas` : ''}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={`font-medium text-theme-text group-hover:text-theme-accent ${transitionClass} ${
+              settings.fontScale === 'sm' ? 'text-sm' :
+              settings.fontScale === 'lg' ? 'text-base' :
+              settings.fontScale === 'xl' ? 'text-lg' :
+              'text-sm'
+            }`}>
+              {task.title}
+            </h3>
+            {isRecurring && (
+              <span className={`text-theme-muted bg-theme-bg px-2 py-0.5 rounded-full ${
+                settings.fontScale === 'sm' ? 'text-xs' :
+                settings.fontScale === 'lg' ? 'text-sm' :
+                settings.fontScale === 'xl' ? 'text-base' :
+                'text-xs'
+              }`}>
+                {task.recurring.type === 'daily' ? 'Diária' : 'Semanal'}
+              </span>
+            )}
+          </div>
+          {task.description && (
+            <p className={`text-theme-muted line-clamp-2 mb-2 ${
+              settings.fontScale === 'sm' ? 'text-xs' :
+              settings.fontScale === 'lg' ? 'text-sm' :
+              settings.fontScale === 'xl' ? 'text-base' :
+              'text-xs'
+            }`}>
+              {task.description.replace(/<[^>]*>/g, '').substring(0, 100)}
+              {task.description.length > 100 ? '...' : ''}
+            </p>
+          )}
+          {settings.showProgressBars && progress.total > 0 && (
+            <div className="mt-2">
+              <div className={`flex items-center justify-between text-theme-muted mb-1 ${
+                settings.fontScale === 'sm' ? 'text-xs' :
+                settings.fontScale === 'lg' ? 'text-sm' :
+                settings.fontScale === 'xl' ? 'text-base' :
+                'text-xs'
+              }`}>
+                <span>Progresso</span>
+                <span>{progress.completed}/{progress.total}</span>
+              </div>
+              <div className="w-full h-1.5 bg-theme-bg rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-theme-accent"
+                  style={{ 
+                    width: `${progress.percentage}%`,
+                    transitionDuration: settings.reduceMotion ? '0ms' : '300ms'
+                  }}
+                  aria-hidden="true"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {onUnassign && !isRecurring && (
+            <button
+              onClick={(e) => onUnassign(task.id, e)}
+              className={`p-1.5 text-theme-muted hover:text-theme-text hover:bg-theme-bg rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-accent ${transitionClass}`}
+              aria-label={`Remover tarefa ${task.title} deste dia`}
+              title="Remover deste dia"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+          <svg
+            className="w-5 h-5 text-theme-muted group-hover:text-theme-accent shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </div>
+      </div>
+    </button>
   );
 }

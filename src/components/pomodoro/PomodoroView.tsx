@@ -16,7 +16,7 @@ export function PomodoroView() {
   const miniTimer = useStore($miniTimer);
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div data-section="pomodoro" className="h-full overflow-y-auto">
       <div className="p-8">
         {/* Optional: Show current task being worked on */}
         {selectedTask && (

@@ -3,12 +3,9 @@
  * Orientation and guidance for users when no task is selected
  */
 
-import { useStore } from '@nanostores/react';
-import { $settings } from '../../stores/settingsStore';
+import { Card } from '../ui/Card';
 
 export function TaskDetailEmpty() {
-  const settings = useStore($settings);
-
   return (
     <div className="h-full overflow-y-auto bg-theme-panel">
       <div className="p-8">
@@ -16,7 +13,7 @@ export function TaskDetailEmpty() {
           {/* Welcome Section */}
           <div className="text-center mb-12">
             <div className="w-20 h-20 mx-auto mb-6 bg-theme-sidebar rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-10 h-10 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
@@ -30,7 +27,7 @@ export function TaskDetailEmpty() {
 
           {/* Quick Guide */}
           <div className="space-y-6">
-            <div className="bg-theme-sidebar rounded-xl border border-theme-border p-6">
+            <Card padding="md" variant="sidebar">
               <h3 className="text-lg font-semibold text-theme-text mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -52,7 +49,7 @@ export function TaskDetailEmpty() {
                     2
                   </span>
                   <div>
-                    <p className="font-medium">Defina o próximo pequeno passo</p>
+                    <p className="font-medium">Adicione subtarefas</p>
                     <p className="text-sm text-theme-muted">Quebre tarefas grandes em passos menores e mais gerenciáveis</p>
                   </div>
                 </li>
@@ -66,10 +63,10 @@ export function TaskDetailEmpty() {
                   </div>
                 </li>
               </ul>
-            </div>
+            </Card>
 
             {/* Tips Section */}
-            <div className="bg-theme-sidebar rounded-xl border border-theme-border p-6">
+            <Card padding="md" variant="sidebar">
               <h3 className="text-lg font-semibold text-theme-text mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -81,13 +78,7 @@ export function TaskDetailEmpty() {
                   <svg className="w-4 h-4 text-theme-accent mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm">Use o campo "Próximo pequeno passo" para reduzir a ansiedade de começar</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-theme-accent mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm">Quebre tarefas grandes em subtarefas para manter o foco</span>
+                  <span className="text-sm">Quebre tarefas grandes em subtarefas para manter o foco e reduzir a ansiedade de começar</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <svg className="w-4 h-4 text-theme-accent mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,10 +93,10 @@ export function TaskDetailEmpty() {
                   <span className="text-sm">Use o timer Pomodoro destacável para manter a consciência do tempo sem distrações</span>
                 </li>
               </ul>
-            </div>
+            </Card>
 
             {/* Keyboard Shortcuts */}
-            <div className="bg-theme-sidebar rounded-xl border border-theme-border p-6">
+            <Card padding="md" variant="sidebar">
               <h3 className="text-lg font-semibold text-theme-text mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -138,7 +129,7 @@ export function TaskDetailEmpty() {
                   </kbd>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       </div>

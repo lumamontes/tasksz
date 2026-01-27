@@ -79,11 +79,16 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  nextStep?: string; // Optional "próximo pequeno passo" field for task initiation support
   createdAt: Date;
   updatedAt: Date;
   order: number;
   archived: boolean;
+  // Calendar associations
+  scheduledDate?: string;        // YYYY-MM-DD (local date, no time)
+  recurring?: {
+    type: "daily" | "weekly";
+    daysOfWeek?: number[];       // 0–6 (Sun–Sat), only for weekly
+  };
 }
 
 // New types for the app structure

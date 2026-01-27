@@ -8,7 +8,6 @@ import { useStore } from '@nanostores/react';
 import { $selectedTask, $filteredTasks, $selectedTaskIndex, selectTask, updateTask } from '../../stores/tasksStore';
 import { TaskDetailTopBar } from './TaskDetailTopBar';
 import { TaskSummaryStrip } from './TaskSummaryStrip';
-import { NextStepCard } from './NextStepCard';
 import { SubtasksSection } from './SubtasksSection';
 import { DescriptionSection } from './DescriptionSection';
 import { CalendarSection } from './CalendarSection';
@@ -212,9 +211,6 @@ export function TaskDetailPanel({ onDelete }: TaskDetailPanelProps) {
 
         {/* Content */}
         <div className="py-6">
-          {/* Next Step Card - High Priority */}
-          <NextStepCard task={selectedTask} isEditMode={isEditMode} />
-
           {/* Subtasks - Primary Working Area */}
           <SubtasksSection task={selectedTask} />
 

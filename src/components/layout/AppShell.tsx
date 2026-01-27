@@ -4,10 +4,10 @@
  */
 
 import { useStore } from '@nanostores/react';
-import { $currentSection, $settings, initializeSettings, updateSettings } from '../../stores/settingsStore';
-import { setupPersistence } from '../../stores/persistence';
-import { initializeMiniTimer } from '../../stores/miniTimerStore';
+import { $currentSection, $settings, updateSettings } from '../../stores/settingsStore';
 import { useEffect } from 'react';
+import { useStoreInit } from '../../hooks/useStoreInit';
+import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { Sidebar } from './Sidebar';
 import { TasksView } from '../tasks/TasksView';
 import { PomodoroView } from '../pomodoro/PomodoroView';
@@ -15,7 +15,6 @@ import { CalendarView } from '../calendar/CalendarView';
 import { SettingsPage } from '../settings/SettingsPage';
 import { FocusModeView } from '../focus/FocusModeView';
 import { MiniPomodoro } from '../pomodoro/MiniPomodoro';
-import { KEYBOARD_KEYS } from '../../utils/accessibility';
 
 interface AppShellProps {
   children?: React.ReactNode;
@@ -25,12 +24,8 @@ export function AppShell({ children }: AppShellProps) {
   const currentSection = useStore($currentSection);
   const settings = useStore($settings);
 
-  // Initialize persistence and settings on mount
-  useEffect(() => {
-    setupPersistence();
-    initializeSettings();
-    initializeMiniTimer();
-  }, []);
+  // Initialize stores using centralized hook
+  useStoreInit({ persistence: true, settings: true, miniTimer: true });
 
   // Apply density classes to root
   useEffect(() => {
@@ -39,24 +34,17 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, [settings.density]);
 
-  // Keyboard shortcut for Focus Mode (F key when not typing)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger if not typing in an input/textarea
-      const target = e.target as HTMLElement;
-      const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
-      if (e.key === 'f' || e.key === 'F') {
-        if (!isTyping && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          e.preventDefault();
-          updateSettings({ focusModeEnabled: !settings.focusModeEnabled });
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [settings.focusModeEnabled]);
+  // Keyboard shortcut for Focus Mode using custom hook
+  useKeyboardShortcut(
+    () => {
+      updateSettings({ focusModeEnabled: !settings.focusModeEnabled });
+    },
+    {
+      key: 'f',
+      enabled: true,
+      ignoreInputs: true,
+    }
+  );
 
   // Render the appropriate main panel content based on current section
   const renderMainPanel = () => {

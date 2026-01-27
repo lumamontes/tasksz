@@ -1,0 +1,118 @@
+---
+/**
+ * Sidebar Component (Astro)
+ * Left sidebar with greeting, sections, and task filters
+ * Uses React islands for interactive navigation
+ */
+
+import { SidebarNavigation } from './SidebarNavigation';
+import { TaskFilters } from '../tasks/TaskFilters';
+import { $currentSection, $settings } from '../../stores/settingsStore';
+import { $user, getUserName } from '../../stores/userStore';
+
+// Get current date in Portuguese
+const currentDate = new Date().toLocaleDateString('pt-BR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+
+const formattedDate = `Hoje, ${currentDate.split(',')[1]?.trim()}`;
+---
+
+<div class="h-full flex flex-col">
+  <!-- Header Section -->
+  <div class="p-6 border-b border-theme-border">
+    <h1 class="text-xl font-semibold text-theme-text mb-2">
+      Bem vinde, <span id="user-name">Pessoa</span> :)
+    </h1>
+    <p class="text-sm text-theme-muted">
+      {formattedDate}
+    </p>
+  </div>
+
+  <!-- Sections Navigation (React island for interactivity) -->
+  <nav class="p-6 border-b border-theme-border" role="navigation" aria-label="Seções do aplicativo">
+    <h2 id="sections-heading" class="text-sm font-medium text-theme-text mb-4">
+      Seções
+    </h2>
+    <SidebarNavigation client:load />
+  </nav>
+
+  <!-- Task Filters (only shown when tasks section is active) -->
+  <div id="task-filters-container" class="flex-1 p-6 overflow-y-auto hidden">
+    <h2 id="tasks-heading" class="text-sm font-medium text-theme-text mb-4">
+      Filtros
+    </h2>
+    <TaskFilters client:load />
+  </div>
+
+  <!-- User Avatar -->
+  <div class="p-6 border-t border-theme-border">
+    <div id="user-avatar" class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-theme-accent rounded-full flex items-center justify-center">
+        <span id="user-initial" class="text-sm font-medium text-white">P</span>
+      </div>
+      <span id="user-name-display" class="text-sm font-medium text-theme-text">Pessoa</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { $currentSection } from '../../stores/settingsStore';
+  import { $user, getUserName } from '../../stores/userStore';
+  
+  if (typeof window !== 'undefined') {
+    // Update user name and avatar
+    const updateUserInfo = () => {
+      const userName = getUserName();
+      const user = $user.get();
+      const userInitial = userName.charAt(0).toUpperCase();
+      
+      const nameEl = document.getElementById('user-name');
+      const nameDisplayEl = document.getElementById('user-name-display');
+      const initialEl = document.getElementById('user-initial');
+      const avatarEl = document.getElementById('user-avatar');
+      
+      if (nameEl) nameEl.textContent = userName;
+      if (nameDisplayEl) nameDisplayEl.textContent = userName;
+      if (initialEl) initialEl.textContent = userInitial;
+      
+      // Update avatar image if available
+      if (avatarEl && user.profile?.avatarUrl) {
+        const img = avatarEl.querySelector('img');
+        if (img) {
+          img.src = user.profile.avatarUrl;
+          img.alt = userName;
+        } else {
+          const newImg = document.createElement('img');
+          newImg.src = user.profile.avatarUrl;
+          newImg.alt = userName;
+          newImg.className = 'w-10 h-10 rounded-full';
+          const initialDiv = avatarEl.querySelector('.w-10');
+          if (initialDiv) {
+            initialDiv.replaceWith(newImg);
+          }
+        }
+      }
+    };
+    
+    // Show/hide task filters based on current section
+    const updateTaskFilters = () => {
+      const section = $currentSection.get();
+      const filtersContainer = document.getElementById('task-filters-container');
+      if (filtersContainer) {
+        filtersContainer.classList.toggle('hidden', section !== 'tasks');
+      }
+    };
+    
+    // Subscribe to changes
+    $user.subscribe(updateUserInfo);
+    $currentSection.subscribe(updateTaskFilters);
+    
+    // Initial update
+    updateUserInfo();
+    updateTaskFilters();
+  }
+</script>

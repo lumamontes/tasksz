@@ -1,19 +1,21 @@
 /**
  * CalendarMonthGrid Component
  * Month view calendar grid with task indicators
+ * ND-safe: Clean, simple, no pressure
  */
 
-import { useStore } from '@nanostores/react';
-import { $tasks, getTaskCountForDate } from '../../stores/tasksStore';
 import { $settings } from '../../stores/settingsStore';
+import { useStore } from '@nanostores/react';
 import { formatDateLocal, getTodayString, parseDateLocal } from '../../utils/dateUtils';
 import { useState, useEffect, useRef } from 'react';
+import { CalendarDayCell } from './CalendarDayCell';
 
 interface CalendarMonthGridProps {
   year: number;
   month: number; // 0-11
   selectedDate: string | null; // YYYY-MM-DD
   onDateSelect: (dateStr: string) => void;
+  onMonthChange?: (year: number, month: number) => void;
 }
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -22,8 +24,13 @@ const MONTHS = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-export function CalendarMonthGrid({ year, month, selectedDate, onDateSelect }: CalendarMonthGridProps) {
-  const tasks = useStore($tasks);
+export function CalendarMonthGrid({ 
+  year, 
+  month, 
+  selectedDate, 
+  onDateSelect,
+  onMonthChange 
+}: CalendarMonthGridProps) {
   const settings = useStore($settings);
   const [focusedDate, setFocusedDate] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -43,17 +50,23 @@ export function CalendarMonthGrid({ year, month, selectedDate, onDateSelect }: C
     return formatDateLocal(date);
   };
 
-  // Initialize focused date to today or first day of month
+  // Initialize focused date to selected date, today, or first day of month
   useEffect(() => {
-    if (!focusedDate) {
-      const todayDate = new Date();
-      if (todayDate.getFullYear() === year && todayDate.getMonth() === month) {
-        setFocusedDate(todayStr);
-      } else {
-        setFocusedDate(formatDate(1));
+    if (selectedDate) {
+      const selected = parseDateLocal(selectedDate);
+      if (selected.getFullYear() === year && selected.getMonth() === month) {
+        setFocusedDate(selectedDate);
+        return;
       }
     }
-  }, [year, month]);
+    
+    const todayDate = new Date();
+    if (todayDate.getFullYear() === year && todayDate.getMonth() === month) {
+      setFocusedDate(todayStr);
+    } else {
+      setFocusedDate(formatDate(1));
+    }
+  }, [year, month, selectedDate, todayStr]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -103,58 +116,104 @@ export function CalendarMonthGrid({ year, month, selectedDate, onDateSelect }: C
           e.preventDefault();
           newDate = new Date(year, month, daysInMonth);
           break;
+        case 'PageUp':
+          e.preventDefault();
+          // Move to previous month
+          if (onMonthChange) {
+            const prevMonth = month === 0 ? 11 : month - 1;
+            const prevYear = month === 0 ? year - 1 : year;
+            onMonthChange(prevYear, prevMonth);
+          }
+          return;
+        case 'PageDown':
+          e.preventDefault();
+          // Move to next month
+          if (onMonthChange) {
+            const nextMonth = month === 11 ? 0 : month + 1;
+            const nextYear = month === 11 ? year + 1 : year;
+            onMonthChange(nextYear, nextMonth);
+          }
+          return;
       }
 
       if (newDate) {
-        // Keep within current month view
         const newYear = newDate.getFullYear();
         const newMonth = newDate.getMonth();
-        if (newYear === year && newMonth === month) {
+        
+        // If moved to different month, trigger month change
+        if (newYear !== year || newMonth !== month) {
+          if (onMonthChange) {
+            onMonthChange(newYear, newMonth);
+          }
+          // Set focused date after month changes
+          setTimeout(() => {
+            const newDateStr = formatDateLocal(newDate!);
+            setFocusedDate(newDateStr);
+            onDateSelect(newDateStr);
+          }, 0);
+        } else {
+          // Keep within current month view
           const newDateStr = formatDateLocal(newDate);
           setFocusedDate(newDateStr);
-        } else {
-          // If moved outside month, clamp to first or last day of month
-          if (newYear < year || (newYear === year && newMonth < month)) {
-            setFocusedDate(formatDate(1));
-          } else {
-            setFocusedDate(formatDate(daysInMonth));
-          }
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedDate, year, month, daysInMonth, onDateSelect]);
+  }, [focusedDate, year, month, daysInMonth, onDateSelect, onMonthChange]);
 
   // Generate calendar cells
-  const calendarDays: Array<{ day: number | null; dateStr: string | null }> = [];
+  const calendarDays: Array<{ day: number | null; dateStr: string | null; isOutsideMonth: boolean }> = [];
   
-  // Add empty cells for days before month starts
-  for (let i = 0; i < startingDayOfWeek; i++) {
-    calendarDays.push({ day: null, dateStr: null });
+  // Add days from previous month (for visual continuity)
+  const prevMonthLastDay = new Date(year, month, 0).getDate();
+  const daysToShowFromPrevMonth = startingDayOfWeek;
+  for (let i = daysToShowFromPrevMonth - 1; i >= 0; i--) {
+    const day = prevMonthLastDay - i;
+    const date = new Date(year, month - 1, day);
+    calendarDays.push({ 
+      day, 
+      dateStr: formatDateLocal(date),
+      isOutsideMonth: true 
+    });
   }
   
   // Add days of the month
   for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push({ day, dateStr: formatDate(day) });
+    calendarDays.push({ 
+      day, 
+      dateStr: formatDate(day),
+      isOutsideMonth: false 
+    });
+  }
+  
+  // Add days from next month to fill the grid (6 rows = 42 cells)
+  const totalCells = calendarDays.length;
+  const remainingCells = 42 - totalCells;
+  for (let day = 1; day <= remainingCells; day++) {
+    const date = new Date(year, month + 1, day);
+    calendarDays.push({ 
+      day, 
+      dateStr: formatDateLocal(date),
+      isOutsideMonth: true 
+    });
   }
 
   return (
-    <div className="h-full flex flex-col" ref={gridRef}>
-      {/* Month/Year Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-theme-text">
-          {MONTHS[month]} {year}
-        </h2>
-      </div>
-
+    <div className="h-full flex flex-col" ref={gridRef} role="grid" aria-label={`Calendário de ${MONTHS[month]} ${year}`}>
       {/* Weekday Headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-1 mb-2" role="row">
         {WEEKDAYS.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-theme-muted py-2"
+            className={`text-center font-medium text-theme-muted py-2 ${
+              settings.fontScale === 'sm' ? 'text-xs' :
+              settings.fontScale === 'lg' ? 'text-sm' :
+              settings.fontScale === 'xl' ? 'text-base' :
+              'text-xs'
+            }`}
+            role="columnheader"
             aria-label={day}
           >
             {day}
@@ -163,7 +222,7 @@ export function CalendarMonthGrid({ year, month, selectedDate, onDateSelect }: C
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1 flex-1">
+      <div className="grid grid-cols-7 gap-1 flex-1" role="rowgroup">
         {calendarDays.map((cell, index) => {
           if (cell.day === null) {
             return (
@@ -179,64 +238,24 @@ export function CalendarMonthGrid({ year, month, selectedDate, onDateSelect }: C
           const isToday = dateStr === todayStr;
           const isSelected = selectedDate === dateStr;
           const isFocused = focusedDate === dateStr;
-          const taskCount = getTaskCountForDate(dateStr);
-          const hasTasks = taskCount > 0;
 
           return (
-            <button
+            <CalendarDayCell
               key={dateStr}
-              onClick={() => {
-                setFocusedDate(dateStr);
-                onDateSelect(dateStr);
+              day={cell.day}
+              dateStr={dateStr}
+              isToday={isToday}
+              isSelected={isSelected}
+              isFocused={isFocused}
+              isOutsideMonth={cell.isOutsideMonth}
+              monthName={MONTHS[month]}
+              year={year}
+              onSelect={(date) => {
+                setFocusedDate(date);
+                onDateSelect(date);
               }}
-              className={`
-                aspect-square p-2 rounded-lg border-2 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-theme-accent focus:ring-offset-2
-                ${settings.reduceMotion ? '' : 'transition-all duration-150'}
-                ${
-                  isSelected
-                    ? 'bg-theme-accent/20 border-theme-accent text-theme-text font-semibold'
-                    : isToday
-                    ? 'bg-theme-sidebar border-theme-accent/30 text-theme-text'
-                    : isFocused
-                    ? 'bg-theme-sidebar border-theme-border hover:border-theme-accent/50 text-theme-text'
-                    : 'bg-theme-panel border-theme-border hover:bg-theme-sidebar hover:border-theme-accent/30 text-theme-text'
-                }
-              `}
-              aria-label={`${cell.day} de ${MONTHS[month]} ${year}${hasTasks ? `, ${taskCount} tarefa${taskCount !== 1 ? 's' : ''}` : ''}`}
-              aria-pressed={isSelected}
               tabIndex={isFocused ? 0 : -1}
-            >
-              <div className="flex flex-col items-center justify-center h-full">
-                <span className="text-sm">{cell.day}</span>
-                {hasTasks && (
-                  <div className="mt-1 flex items-center justify-center gap-0.5">
-                    {taskCount <= 3 ? (
-                      // Show individual dots for 1-3 tasks
-                      Array.from({ length: taskCount }).map((_, i) => (
-                        <span
-                          key={i}
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            isSelected ? 'bg-theme-accent' : 'bg-theme-muted'
-                          }`}
-                          aria-hidden="true"
-                        />
-                      ))
-                    ) : (
-                      // Show count for 4+ tasks
-                      <span
-                        className={`text-xs font-medium ${
-                          isSelected ? 'text-theme-accent' : 'text-theme-muted'
-                        }`}
-                        aria-hidden="true"
-                      >
-                        {taskCount}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </button>
+            />
           );
         })}
       </div>

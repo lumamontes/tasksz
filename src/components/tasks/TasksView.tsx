@@ -84,7 +84,7 @@ export function TasksView() {
   // Mobile: Single column with conditional rendering
   // Desktop: 3-column layout (Sidebar already rendered) + TaskListPanel + TaskDetailPanel
   return (
-    <>
+    <div data-section="tasks" className="h-full">
       {/* Desktop: 2-column (TaskListPanel + TaskDetailPanel) */}
       <div className="hidden lg:flex h-full overflow-hidden">
         {/* Task List Panel (Left) */}
@@ -146,6 +146,6 @@ export function TasksView() {
           />
         )}
       </div>
-    </>
+    </div>
   );
 }

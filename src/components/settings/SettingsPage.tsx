@@ -27,7 +27,7 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-theme-panel">
+    <div data-section="configuracoes" className="h-full overflow-y-auto bg-theme-panel">
       <div className="max-w-4xl mx-auto p-8">
         {/* Header */}
         <div className="mb-8">

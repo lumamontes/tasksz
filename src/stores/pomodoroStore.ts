@@ -64,6 +64,12 @@ export function setMode(mode: 'focus' | 'break' | 'longBreak') {
 
 // Start countdown
 export function startCountdown() {
+  // Clear any existing timer first to prevent duplicates
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  
   if ($isActive.get()) return;
   
   $isActive.set(true);
@@ -172,9 +178,16 @@ if (typeof window !== 'undefined' && 'Notification' in window) {
 
 // Persist pomodoro state to localStorage for cross-window sync
 const POMODORO_STORAGE_KEY = 'tarefitas_v1_pomodoroState';
+let pomodoroStateLoaded = false; // Prevent multiple loads in same window
+let lastSaveTime = 0; // Throttle saves to prevent excessive writes
 
 export function savePomodoroState() {
   if (typeof window === 'undefined') return;
+  
+  // Throttle saves to once per second to prevent lag
+  const now = Date.now();
+  if (now - lastSaveTime < 1000) return;
+  lastSaveTime = now;
   
   try {
     const state = {
@@ -195,44 +208,70 @@ export function savePomodoroState() {
 export function loadPomodoroState() {
   if (typeof window === 'undefined') return false;
   
+  // Prevent multiple loads - only load once per session
+  if (pomodoroStateLoaded) return false;
+  
   try {
     const stored = localStorage.getItem(POMODORO_STORAGE_KEY);
-    if (!stored) return false;
+    if (!stored) {
+      pomodoroStateLoaded = true; // Mark as loaded even if no state exists
+      return false;
+    }
     
     const state = JSON.parse(stored);
     const age = Date.now() - (state.timestamp || 0);
     
     // Only load if state is recent (less than 1 minute old)
     // This prevents loading stale state after page reload
-    if (age > 60000) return false;
+    if (age > 60000) {
+      pomodoroStateLoaded = true;
+      return false;
+    }
     
     $minutes.set(state.minutes);
     $seconds.set(state.seconds);
     $mode.set(state.mode);
-    $isActive.set(state.isActive);
     $hasFinished.set(state.hasFinished);
     $completedFocusSessions.set(state.completedFocusSessions || 0);
     
-    // If timer was active, restart it
-    if (state.isActive && !state.hasFinished) {
-      startCountdown();
+    // Only set isActive if timer is not already running
+    // This prevents conflicts when multiple windows are open
+    if (!timerInterval) {
+      $isActive.set(state.isActive);
+      
+      // If timer was active, restart it (but only if no timer is already running)
+      if (state.isActive && !state.hasFinished) {
+        startCountdown();
+      }
     }
     
+    pomodoroStateLoaded = true;
     return true;
   } catch (error) {
     console.error('Failed to load pomodoro state:', error);
+    pomodoroStateLoaded = true;
     return false;
   }
 }
 
-// Auto-save pomodoro state on changes
+// Auto-save pomodoro state on changes (throttled)
 if (typeof window !== 'undefined') {
-  $minutes.subscribe(() => savePomodoroState());
-  $seconds.subscribe(() => savePomodoroState());
-  $mode.subscribe(() => savePomodoroState());
-  $isActive.subscribe(() => savePomodoroState());
-  $hasFinished.subscribe(() => savePomodoroState());
-  $completedFocusSessions.subscribe(() => savePomodoroState());
+  // Use a single throttled save function to prevent excessive writes
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  const throttledSave = () => {
+    if (saveTimeout) return;
+    saveTimeout = setTimeout(() => {
+      savePomodoroState();
+      saveTimeout = null;
+    }, 100); // Debounce saves to every 100ms
+  };
+  
+  $minutes.subscribe(throttledSave);
+  $seconds.subscribe(throttledSave);
+  $mode.subscribe(throttledSave);
+  $isActive.subscribe(throttledSave);
+  $hasFinished.subscribe(throttledSave);
+  $completedFocusSessions.subscribe(throttledSave);
   
   // Listen for storage events (cross-window sync)
   window.addEventListener('storage', (e) => {
@@ -248,11 +287,13 @@ if (typeof window !== 'undefined') {
           $mode.set(state.mode);
           
           // Don't sync isActive to avoid conflicts with running timers
-          // Only sync if timer was just started/stopped
+          // Only sync if timer was just started/stopped and no timer is currently running
           if (state.isActive !== $isActive.get()) {
-            if (state.isActive && !timerInterval) {
+            if (state.isActive && !timerInterval && !$isActive.get()) {
+              // Only start if we're not already active and no timer exists
               startCountdown();
             } else if (!state.isActive && timerInterval) {
+              // Pause if timer is running but state says it should be paused
               pauseCountdown();
             }
           }

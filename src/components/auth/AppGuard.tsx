@@ -1,12 +1,14 @@
 /**
  * AppGuard Component
  * Redirects to onboarding if user hasn't set their name
+ * Uses useStoreInit hook to avoid duplicate initialization
  */
 
 import { useEffect, useState } from 'react';
 import { useStore } from '@nanostores/react';
 import { $user, hasCompletedOnboarding } from '../../stores/userStore';
-import { setupPersistence } from '../../stores/persistence';
+import { useStoreInit } from '../../hooks/useStoreInit';
+import { LoadingScreen } from '../ui/LoadingScreen';
 
 interface AppGuardProps {
   children: React.ReactNode;
@@ -16,12 +18,12 @@ export function AppGuard({ children }: AppGuardProps) {
   const user = useStore($user);
   const [isChecking, setIsChecking] = useState(true);
 
+  // Initialize stores using centralized hook
+  useStoreInit({ persistence: true, settings: true });
+
   useEffect(() => {
-    // Initialize persistence first
-    setupPersistence();
-    
-    // Small delay to ensure persistence is loaded
-    const checkUser = setTimeout(() => {
+    // Check onboarding status after persistence is loaded
+    const checkOnboarding = () => {
       const completed = hasCompletedOnboarding();
       
       if (!completed) {
@@ -30,22 +32,16 @@ export function AppGuard({ children }: AppGuardProps) {
       } else {
         setIsChecking(false);
       }
-    }, 200);
+    };
+
+    // Small delay to ensure persistence is loaded
+    const timeoutId = setTimeout(checkOnboarding, 200);
     
-    return () => clearTimeout(checkUser);
-  }, [user]);
+    return () => clearTimeout(timeoutId);
+  }, []); // Empty deps - only check once on mount
 
   if (isChecking) {
-    return (
-      <div className="min-h-screen bg-theme-bg flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-theme-panel rounded-full flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-theme-accent border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p className="text-theme-muted">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Carregando..." />;
   }
 
   return <>{children}</>;

@@ -3,7 +3,7 @@
  * Standalone popup window version of the mini pomodoro timer
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useStore } from '@nanostores/react';
 import {
   $minutes,
@@ -18,10 +18,7 @@ import {
 } from '../../stores/pomodoroStore';
 import { $settings } from '../../stores/settingsStore';
 import { $selectedTask } from '../../stores/tasksStore';
-import { setupPersistence } from '../../stores/persistence';
-import { initializeSettings } from '../../stores/settingsStore';
-import { initializeMiniTimer } from '../../stores/miniTimerStore';
-import { loadPomodoroState } from '../../stores/pomodoroStore';
+import { useStoreInit } from '../../hooks/useStoreInit';
 
 export function MiniPomodoroPopup() {
   const minutes = useStore($minutes);
@@ -32,17 +29,13 @@ export function MiniPomodoroPopup() {
   const settings = useStore($settings);
   const selectedTask = useStore($selectedTask);
 
-  // Initialize stores when popup opens
-  useEffect(() => {
-    setupPersistence();
-    initializeSettings();
-    initializeMiniTimer();
-  }, []);
-
-  // Load pomodoro state on mount
-  useEffect(() => {
-    loadPomodoroState();
-  }, []);
+  // Initialize stores using centralized hook
+  useStoreInit({
+    persistence: true,
+    settings: true,
+    miniTimer: true,
+    pomodoro: true,
+  });
 
   const formatTime = (mins: number, secs: number) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;

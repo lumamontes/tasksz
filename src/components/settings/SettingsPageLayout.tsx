@@ -4,20 +4,18 @@
  */
 
 import { useStore } from '@nanostores/react';
-import { $settings, initializeSettings, updateSettings } from '../../stores/settingsStore';
-import { setupPersistence } from '../../stores/persistence';
+import { $settings, updateSettings } from '../../stores/settingsStore';
 import { useEffect } from 'react';
+import { useStoreInit } from '../../hooks/useStoreInit';
+import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { Sidebar } from '../layout/Sidebar';
 import { SettingsPage } from './SettingsPage';
 
 export function SettingsPageLayout() {
   const settings = useStore($settings);
 
-  // Initialize persistence and settings on mount
-  useEffect(() => {
-    setupPersistence();
-    initializeSettings();
-  }, []);
+  // Initialize stores using centralized hook
+  useStoreInit({ persistence: true, settings: true });
 
   // Apply density classes to root
   useEffect(() => {
@@ -26,24 +24,17 @@ export function SettingsPageLayout() {
     }
   }, [settings.density]);
 
-  // Keyboard shortcut for Focus Mode (F key when not typing)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger if not typing in an input/textarea
-      const target = e.target as HTMLElement;
-      const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
-      if (e.key === 'f' || e.key === 'F') {
-        if (!isTyping && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          e.preventDefault();
-          updateSettings({ focusModeEnabled: !settings.focusModeEnabled });
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [settings.focusModeEnabled]);
+  // Keyboard shortcut for Focus Mode using custom hook
+  useKeyboardShortcut(
+    () => {
+      updateSettings({ focusModeEnabled: !settings.focusModeEnabled });
+    },
+    {
+      key: 'f',
+      enabled: true,
+      ignoreInputs: true,
+    }
+  );
 
   // If Focus Mode is enabled, show only SettingsPage without sidebar
   if (settings.focusModeEnabled) {

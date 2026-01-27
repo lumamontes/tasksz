@@ -258,3 +258,55 @@ export function getTaskCountForDate(dateStr: string): number {
 export function hasTasksForDate(dateStr: string): boolean {
   return getTaskCountForDate(dateStr) > 0;
 }
+
+/**
+ * Get scheduled tasks for a specific date (not recurring)
+ */
+export function getScheduledTasksForDate(dateStr: string): Task[] {
+  const tasks = $tasks.get();
+  return tasks.filter(task => 
+    !task.archived && 
+    task.scheduledDate === dateStr &&
+    !task.recurring
+  );
+}
+
+/**
+ * Get recurring tasks that match a specific date
+ */
+export function getRecurringTasksForDate(dateStr: string): Task[] {
+  const tasks = $tasks.get();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const dayOfWeek = date.getDay();
+  
+  return tasks.filter(task => {
+    if (task.archived || !task.recurring) return false;
+    
+    if (task.recurring.type === 'daily') {
+      return true;
+    } else if (task.recurring.type === 'weekly' && task.recurring.daysOfWeek) {
+      return task.recurring.daysOfWeek.includes(dayOfWeek);
+    }
+    
+    return false;
+  });
+}
+
+/**
+ * Get recurring tasks for a specific weekday (0-6, Sunday-Saturday)
+ */
+export function getRecurringTasksForWeekday(weekday: number): Task[] {
+  const tasks = $tasks.get();
+  return tasks.filter(task => {
+    if (task.archived || !task.recurring) return false;
+    
+    if (task.recurring.type === 'daily') {
+      return true;
+    } else if (task.recurring.type === 'weekly' && task.recurring.daysOfWeek) {
+      return task.recurring.daysOfWeek.includes(weekday);
+    }
+    
+    return false;
+  });
+}

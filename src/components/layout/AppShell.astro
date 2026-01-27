@@ -1,0 +1,169 @@
+---
+/**
+ * AppShell Layout Component (Astro)
+ * Main application shell with sidebar and content area
+ * Uses nanostores for state, React islands for interactivity
+ */
+
+import Sidebar from './Sidebar.astro';
+import { TasksView } from '../tasks/TasksView';
+import { PomodoroView } from '../pomodoro/PomodoroView';
+import { CalendarView } from '../calendar/CalendarView';
+import { SettingsPage } from '../settings/SettingsPage';
+import { FocusModeView } from '../focus/FocusModeView';
+import { MiniPomodoro } from '../pomodoro/MiniPomodoro';
+---
+
+<div id="app-shell" class="flex h-screen bg-theme-bg font-sans text-theme-text overflow-hidden">
+  <!-- Skip Links for Accessibility -->
+  <div class="sr-only">
+    <a 
+      href="#main-content"
+      class="focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-theme-accent text-white px-4 py-2 rounded-lg z-50"
+    >
+      Pular para o conteúdo principal
+    </a>
+    <a 
+      href="#sidebar-navigation"
+      class="focus:not-sr-only focus:absolute focus:top-4 focus:left-40 bg-theme-accent text-white px-4 py-2 rounded-lg z-50"
+    >
+      Pular para a navegação
+    </a>
+  </div>
+
+  <!-- Left Sidebar -->
+  <aside 
+    id="sidebar-navigation"
+    class="w-80 bg-theme-sidebar border-r border-theme-border shrink-0"
+    role="navigation"
+    aria-label="Navegação principal"
+  >
+    <Sidebar client:load />
+  </aside>
+
+  <!-- Main Panel -->
+  <main 
+    id="main-content"
+    class="flex-1 bg-theme-panel overflow-hidden"
+    role="main"
+  >
+    <!-- Dynamic content based on current section -->
+    <div id="main-content-area" class="h-full">
+      <TasksView client:load />
+      <PomodoroView client:load />
+      <CalendarView client:load />
+      <SettingsPage client:load />
+    </div>
+  </main>
+
+  <!-- Floating Mini Pomodoro Timer -->
+  <MiniPomodoro client:load />
+</div>
+
+<!-- Focus Mode Overlay (conditionally rendered via React based on settings) -->
+<div id="focus-mode-container" style="display: none;">
+  <FocusModeView client:load />
+</div>
+
+<script>
+  import { initStores } from '../../utils/initStores';
+  import { $currentSection, $settings, updateSettings, applyTheme, applyFont } from '../../stores/settingsStore';
+  
+  // Initialize stores on page load
+  initStores();
+  
+  // Apply initial theme and font
+  const settings = $settings.get();
+  applyTheme(settings);
+  applyFont(settings);
+  
+  const appShell = document.getElementById('app-shell');
+  
+  // Apply density classes to root
+  const updateDensity = () => {
+    const settings = $settings.get();
+    document.body.className = `density-${settings.density}`;
+  };
+  
+  // Show/hide focus mode and main app shell
+  const updateFocusMode = () => {
+    const settings = $settings.get();
+    const focusModeContainer = document.getElementById('focus-mode-container');
+    
+    if (settings.focusModeEnabled) {
+      if (appShell) appShell.style.display = 'none';
+      if (focusModeContainer) focusModeContainer.style.display = 'block';
+    } else {
+      if (appShell) appShell.style.display = 'flex';
+      if (focusModeContainer) focusModeContainer.style.display = 'none';
+    }
+  };
+  
+  // Show/hide sections based on current section
+  const updateMainContent = () => {
+    const section = $currentSection.get();
+    const sections = ['tasks', 'pomodoro', 'calendar', 'configuracoes'];
+    
+    sections.forEach(sectionId => {
+      const el = document.querySelector(`[data-section="${sectionId}"]`) as HTMLElement;
+      if (el) {
+        if (sectionId === section) {
+          el.style.display = 'block';
+          el.style.visibility = 'visible';
+        } else {
+          el.style.display = 'none';
+          el.style.visibility = 'hidden';
+        }
+      }
+    });
+  };
+  
+  // Wait for React components to mount, then update
+  const checkAndUpdate = () => {
+    const hasComponents = document.querySelector('[data-section]') !== null;
+    if (hasComponents) {
+      updateMainContent();
+    } else {
+      setTimeout(checkAndUpdate, 100);
+    }
+  };
+  
+  // Keyboard shortcut for Focus Mode (F key when not typing)
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+    
+    if ((e.key === 'f' || e.key === 'F') && !isTyping && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      const settings = $settings.get();
+      updateSettings({ focusModeEnabled: !settings.focusModeEnabled });
+    }
+  };
+  
+  // Subscribe to store changes
+  $settings.subscribe(updateDensity);
+  $settings.subscribe(updateFocusMode);
+  $currentSection.subscribe(updateMainContent);
+  
+  // Initial updates
+  updateDensity();
+  updateFocusMode();
+  
+  // Initial section update after a short delay to allow React hydration
+  setTimeout(checkAndUpdate, 200);
+  
+  // Add keyboard listener
+  window.addEventListener('keydown', handleKeyDown);
+</script>
+
+<style>
+  /* Ensure proper layout */
+  #app-shell {
+    position: relative;
+  }
+  
+  /* Hide sections by default, React components will handle visibility */
+  [data-section] {
+    height: 100%;
+  }
+</style>

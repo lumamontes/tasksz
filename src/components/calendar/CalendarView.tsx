@@ -2,23 +2,69 @@
  * CalendarView Component
  * Calendar view for scheduling tasks and routines
  * Calm, visual time-awareness tool - not a rigid scheduling system
+ * ND-safe: No pressure, clear navigation, optional features
  */
 
 import { useState, useEffect } from 'react';
+import { useStore } from '@nanostores/react';
+import { CalendarHeader } from './CalendarHeader';
 import { CalendarMonthGrid } from './CalendarMonthGrid';
 import { CalendarDayPanel } from './CalendarDayPanel';
+import { $settings } from '../../stores/settingsStore';
 import { getTodayString, parseDateLocal } from '../../utils/dateUtils';
 
+const LAST_SELECTED_CALENDAR_DATE_KEY = 'lastSelectedCalendarDate';
+
 export function CalendarView() {
+  const settings = useStore($settings);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
+  const [isMobileView, setIsMobileView] = useState(false);
 
-  // Initialize selected date to today
+  // Initialize selected date from localStorage or today
   useEffect(() => {
-    if (!selectedDate) {
-      setSelectedDate(getTodayString());
+    if (typeof window === 'undefined') return;
+    
+    const savedDate = localStorage.getItem(LAST_SELECTED_CALENDAR_DATE_KEY);
+    if (savedDate) {
+      try {
+        const date = parseDateLocal(savedDate);
+        // Validate the date is reasonable (not too far in past/future)
+        const now = new Date();
+        const yearDiff = Math.abs(date.getFullYear() - now.getFullYear());
+        if (yearDiff <= 1) {
+          setSelectedDate(savedDate);
+          setCurrentYear(date.getFullYear());
+          setCurrentMonth(date.getMonth());
+          return;
+        }
+      } catch (e) {
+        // Invalid date, fall through to today
+      }
     }
+    
+    // Default to today
+    const todayStr = getTodayString();
+    setSelectedDate(todayStr);
+  }, []);
+
+  // Persist selected date to localStorage
+  useEffect(() => {
+    if (selectedDate && typeof window !== 'undefined') {
+      localStorage.setItem(LAST_SELECTED_CALENDAR_DATE_KEY, selectedDate);
+    }
+  }, [selectedDate]);
+
+  // Detect mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileView(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const handleDateSelect = (dateStr: string) => {
@@ -59,51 +105,42 @@ export function CalendarView() {
     setSelectedDate(todayStr);
   };
 
-  return (
-    <div className="h-full flex flex-col lg:flex-row bg-theme-panel overflow-hidden">
-      {/* Month View - Left Side (Desktop) / Top (Mobile) */}
-      <div className="lg:w-2/3 lg:border-r lg:border-theme-border p-6 lg:p-8 overflow-y-auto">
-        {/* Month Navigation */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handlePreviousMonth}
-              className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-sidebar rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
-              aria-label="Mês anterior"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={handleNextMonth}
-              className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-sidebar rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
-              aria-label="Próximo mês"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-          <button
-            onClick={handleToday}
-            className="px-4 py-2 text-sm font-medium text-theme-text bg-theme-sidebar hover:bg-theme-bg border border-theme-border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
-            aria-label="Ir para hoje"
-          >
-            Hoje
-          </button>
-        </div>
+  const handleMonthChange = (year: number, month: number) => {
+    setCurrentYear(year);
+    setCurrentMonth(month);
+  };
 
+  const transitionClass = settings.reduceMotion ? '' : 'transition-all duration-300';
+  const paddingClass = settings.density === 'compact' ? 'p-4 lg:p-6' : 'p-6 lg:p-8';
+
+  return (
+    <div 
+      data-section="calendar" 
+      className={`h-full flex flex-col lg:flex-row bg-theme-panel overflow-hidden ${transitionClass}`}
+    >
+      {/* Month View - Left Side (Desktop) / Full (Mobile) */}
+      <div className={`lg:w-2/3 lg:border-r lg:border-theme-border ${paddingClass} overflow-y-auto`}>
+        <CalendarHeader
+          year={currentYear}
+          month={currentMonth}
+          onPreviousMonth={handlePreviousMonth}
+          onNextMonth={handleNextMonth}
+          onToday={handleToday}
+        />
+        
         <CalendarMonthGrid
           year={currentYear}
           month={currentMonth}
           selectedDate={selectedDate}
           onDateSelect={handleDateSelect}
+          onMonthChange={handleMonthChange}
         />
       </div>
 
-      {/* Day Panel - Right Side (Desktop) / Bottom (Mobile) */}
-      <div className="lg:w-1/3 lg:border-l lg:border-theme-border">
+      {/* Day Panel - Right Side (Desktop) / Hidden on Mobile (shown via modal/slide) */}
+      <div className={`lg:w-1/3 lg:border-l lg:border-theme-border ${
+        isMobileView && selectedDate ? 'hidden' : ''
+      }`}>
         <CalendarDayPanel dateStr={selectedDate} />
       </div>
     </div>

@@ -7,7 +7,10 @@ import { useStore } from '@nanostores/react';
 import { $filteredTasks, $selectedTaskId, selectTask, getTaskProgress } from '../../stores/tasksStore';
 import { $settings } from '../../stores/settingsStore';
 import { useState, useEffect, useRef } from 'react';
+import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Plus } from 'lucide-react';
 
 interface TaskListPanelProps {
   onTaskSelect: (taskId: string) => void;
@@ -30,44 +33,69 @@ export function TaskListPanel({ onTaskSelect, onCreateTask }: TaskListPanelProps
       )
     : filteredTasks;
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if not typing in input
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
+  // Keyboard navigation - Arrow Down / J
+  useKeyboardShortcut(
+    () => {
+      if (displayTasks.length > 0) {
+        const currentIndex = focusedIndex >= 0 ? focusedIndex : 
+          (selectedTaskId ? displayTasks.findIndex(t => t.id === selectedTaskId) : 0);
+        const nextIndex = Math.min(currentIndex + 1, displayTasks.length - 1);
+        setFocusedIndex(nextIndex);
+        selectTask(displayTasks[nextIndex].id);
       }
+    },
+    { key: 'ArrowDown', enabled: true, ignoreInputs: true }
+  );
 
-      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
-        e.preventDefault();
-        if (displayTasks.length > 0) {
-          const currentIndex = focusedIndex >= 0 ? focusedIndex : 
-            (selectedTaskId ? displayTasks.findIndex(t => t.id === selectedTaskId) : 0);
-          const nextIndex = Math.min(currentIndex + 1, displayTasks.length - 1);
-          setFocusedIndex(nextIndex);
-          selectTask(displayTasks[nextIndex].id);
-        }
-      } else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') {
-        e.preventDefault();
-        if (displayTasks.length > 0) {
-          const currentIndex = focusedIndex >= 0 ? focusedIndex : 
-            (selectedTaskId ? displayTasks.findIndex(t => t.id === selectedTaskId) : 0);
-          const prevIndex = Math.max(currentIndex - 1, 0);
-          setFocusedIndex(prevIndex);
-          selectTask(displayTasks[prevIndex].id);
-        }
-      } else if (e.key === 'Enter' && focusedIndex >= 0) {
-        e.preventDefault();
-        if (displayTasks[focusedIndex]) {
-          onTaskSelect(displayTasks[focusedIndex].id);
-        }
+  useKeyboardShortcut(
+    () => {
+      if (displayTasks.length > 0) {
+        const currentIndex = focusedIndex >= 0 ? focusedIndex : 
+          (selectedTaskId ? displayTasks.findIndex(t => t.id === selectedTaskId) : 0);
+        const nextIndex = Math.min(currentIndex + 1, displayTasks.length - 1);
+        setFocusedIndex(nextIndex);
+        selectTask(displayTasks[nextIndex].id);
       }
-    };
+    },
+    { key: 'j', enabled: true, ignoreInputs: true }
+  );
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [displayTasks, focusedIndex, selectedTaskId, onTaskSelect]);
+  // Keyboard navigation - Arrow Up / K
+  useKeyboardShortcut(
+    () => {
+      if (displayTasks.length > 0) {
+        const currentIndex = focusedIndex >= 0 ? focusedIndex : 
+          (selectedTaskId ? displayTasks.findIndex(t => t.id === selectedTaskId) : 0);
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        setFocusedIndex(prevIndex);
+        selectTask(displayTasks[prevIndex].id);
+      }
+    },
+    { key: 'ArrowUp', enabled: true, ignoreInputs: true }
+  );
+
+  useKeyboardShortcut(
+    () => {
+      if (displayTasks.length > 0) {
+        const currentIndex = focusedIndex >= 0 ? focusedIndex : 
+          (selectedTaskId ? displayTasks.findIndex(t => t.id === selectedTaskId) : 0);
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        setFocusedIndex(prevIndex);
+        selectTask(displayTasks[prevIndex].id);
+      }
+    },
+    { key: 'k', enabled: true, ignoreInputs: true }
+  );
+
+  // Keyboard navigation - Enter
+  useKeyboardShortcut(
+    () => {
+      if (focusedIndex >= 0 && displayTasks[focusedIndex]) {
+        onTaskSelect(displayTasks[focusedIndex].id);
+      }
+    },
+    { key: 'Enter', enabled: focusedIndex >= 0, ignoreInputs: true }
+  );
 
   // Reset focused index when selection changes externally
   useEffect(() => {
@@ -92,31 +120,19 @@ export function TaskListPanel({ onTaskSelect, onCreateTask }: TaskListPanelProps
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-theme-text">Tarefas</h2>
           <Button onClick={onCreateTask} size="small">
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Nova
+            <Plus />
           </Button>
         </div>
         
         {/* Search */}
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar tarefa…"
-            className="w-full px-4 py-2 pl-10 bg-theme-panel border border-theme-border rounded-lg text-theme-text placeholder-theme-muted focus:outline-none focus:ring-2 focus:ring-theme-accent"
-          />
-          <svg
-            className="absolute left-3 top-2.5 w-5 h-5 text-theme-muted"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
+        <Input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar tarefa…"
+          size="sm"
+          fullWidth
+        />
       </div>
 
       {/* Task List */}

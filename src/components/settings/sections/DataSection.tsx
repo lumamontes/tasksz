@@ -7,6 +7,8 @@ import { useStore } from '@nanostores/react';
 import { $tasks, $subtasks } from '../../../stores/tasksStore';
 import { $settings, resetSettings } from '../../../stores/settingsStore';
 import { useState } from 'react';
+import { Card } from '../../ui/Card';
+import { Button } from '../../ui/Button';
 
 export function DataSection() {
   const tasks = useStore($tasks);
@@ -90,25 +92,25 @@ export function DataSection() {
       <div>
         <h3 className="text-base font-medium text-theme-text mb-4">Visão Geral dos Dados</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-3 rounded-lg border border-theme-border bg-theme-sidebar">
+          <Card padding="sm" variant="sidebar">
             <div className="text-2xl font-semibold text-theme-text">{tasks.length}</div>
             <div className="text-sm text-theme-muted">Tarefas</div>
-          </div>
-          <div className="p-3 rounded-lg border border-theme-border bg-theme-sidebar">
+          </Card>
+          <Card padding="sm" variant="sidebar">
             <div className="text-2xl font-semibold text-theme-text">{subtasks.length}</div>
             <div className="text-sm text-theme-muted">Subtarefas</div>
-          </div>
-          <div className="p-3 rounded-lg border border-theme-border bg-theme-sidebar">
+          </Card>
+          <Card padding="sm" variant="sidebar">
             <div className="text-2xl font-semibold text-theme-text">{settings.themeId}</div>
             <div className="text-sm text-theme-muted">Tema Atual</div>
-          </div>
+          </Card>
         </div>
       </div>
 
       {/* Export Data */}
       <div>
         <h3 className="text-base font-medium text-theme-text mb-4">Exportar Dados</h3>
-        <div className="p-4 rounded-lg border border-theme-border bg-theme-sidebar">
+        <Card padding="md" variant="sidebar">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-green-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -119,21 +121,22 @@ export function DataSection() {
                 Salva todas as suas tarefas, subtarefas e configurações em um arquivo JSON. 
                 Recomendamos fazer backups regularmente.
               </div>
-              <button
+              <Button
                 onClick={exportData}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+                variant="primary"
+                className="bg-green-600 hover:bg-green-700"
               >
                 Baixar Backup
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Import Data */}
       <div>
         <h3 className="text-base font-medium text-theme-text mb-4">Importar Dados</h3>
-        <div className="p-4 rounded-lg border border-theme-border bg-theme-sidebar">
+        <Card padding="md" variant="sidebar">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 11-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -157,13 +160,13 @@ export function DataSection() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Reset to Defaults */}
       <div>
         <h3 className="text-base font-medium text-theme-text mb-4">Restaurar Padrões</h3>
-        <div className="p-4 rounded-lg border border-red-200 bg-red-50">
+        <Card padding="md" variant="sidebar" className="border-red-200 bg-red-50">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-red-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -174,16 +177,17 @@ export function DataSection() {
                 Remove todas as tarefas, subtarefas e configurações. Esta ação não pode ser desfeita. 
                 Certifique-se de fazer um backup antes.
               </div>
-              <button
+              <Button
                 onClick={resetAllData}
-                className={`px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                variant={showResetConfirm ? 'primary' : 'secondary'}
+                className={
                   showResetConfirm
-                    ? 'bg-red-700 text-white'
+                    ? 'bg-red-700 hover:bg-red-800 text-white'
                     : 'bg-red-100 text-red-700 hover:bg-red-200'
-                }`}
+                }
               >
                 {showResetConfirm ? 'Confirmar Reset' : 'Restaurar Padrões'}
-              </button>
+              </Button>
               {showResetConfirm && (
                 <p className="text-xs text-red-600 mt-2">
                   Clique novamente para confirmar. Esta ação é irreversível.
@@ -191,20 +195,20 @@ export function DataSection() {
               )}
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Storage Info */}
       <div>
         <h3 className="text-base font-medium text-theme-text mb-4">Armazenamento</h3>
-        <div className="p-3 rounded-lg border border-theme-border bg-theme-sidebar">
+        <Card padding="sm" variant="sidebar">
           <div className="text-sm text-theme-muted space-y-1">
             <div>• Todos os dados são armazenados localmente no seu dispositivo</div>
             <div>• Nenhuma informação é enviada para servidores externos</div>
             <div>• Os dados ficam disponíveis apenas neste navegador</div>
             <div>• Faça backups regularmente para não perder seus dados</div>
           </div>
-        </div>
+        </Card>
       </div>
 
     </div>

@@ -1,14 +1,13 @@
 /**
  * FocusModeView Component
  * Minimal, distraction-free view for deep focus
- * Shows only: current task, next step, next subtask, pomodoro controls
+ * Shows only: current task, next subtask, pomodoro controls
  */
 
 import { useStore } from '@nanostores/react';
-import { $selectedTask, $selectedTaskSubtasks, updateTask } from '../../stores/tasksStore';
+import { $selectedTask, $selectedTaskSubtasks } from '../../stores/tasksStore';
 import { $settings, updateSettings } from '../../stores/settingsStore';
 import { PomodoroTimer } from '../PomodoroTimer';
-import { useState, useEffect } from 'react';
 import {
   $isActive,
   startCountdown,
@@ -20,41 +19,9 @@ export function FocusModeView() {
   const subtasks = useStore($selectedTaskSubtasks);
   const settings = useStore($settings);
   const isPomodoroActive = useStore($isActive);
-  
-  const [isEditingNextStep, setIsEditingNextStep] = useState(false);
-  const [nextStepValue, setNextStepValue] = useState('');
 
   // Get next incomplete subtask
   const nextSubtask = subtasks.find(s => !s.done);
-
-  // Initialize nextStep editing
-  useEffect(() => {
-    if (selectedTask) {
-      setNextStepValue(selectedTask.nextStep || '');
-    }
-  }, [selectedTask]);
-
-  // Handle nextStep editing
-  const handleNextStepEdit = () => {
-    if (selectedTask) {
-      setNextStepValue(selectedTask.nextStep || '');
-      setIsEditingNextStep(true);
-    }
-  };
-
-  const handleNextStepSave = () => {
-    if (selectedTask && nextStepValue.trim()) {
-      updateTask(selectedTask.id, { nextStep: nextStepValue.trim() });
-    }
-    setIsEditingNextStep(false);
-  };
-
-  const handleNextStepCancel = () => {
-    if (selectedTask) {
-      setNextStepValue(selectedTask.nextStep || '');
-    }
-    setIsEditingNextStep(false);
-  };
 
   // If no task selected, show gentle empty state
   if (!selectedTask) {
@@ -103,64 +70,6 @@ export function FocusModeView() {
           {selectedTask.title}
         </h1>
 
-        {/* Next Step Section */}
-        <div className="w-full mb-8">
-          {isEditingNextStep ? (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-theme-muted mb-2">
-                Próximo pequeno passo
-              </label>
-              <input
-                type="text"
-                value={nextStepValue}
-                onChange={(e) => setNextStepValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleNextStepSave();
-                  if (e.key === 'Escape') handleNextStepCancel();
-                }}
-                className="w-full px-4 py-3 bg-theme-sidebar border border-theme-border rounded-lg text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-accent text-lg"
-                placeholder="Qual é o menor passo possível?"
-                autoFocus
-              />
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={handleNextStepSave}
-                  className="px-4 py-2 bg-theme-accent text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-theme-accent"
-                >
-                  Salvar
-                </button>
-                <button
-                  onClick={handleNextStepCancel}
-                  className="px-4 py-2 bg-theme-sidebar text-theme-text rounded-lg text-sm font-medium hover:bg-theme-border transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="w-full">
-              <label className="block text-sm font-medium text-theme-muted mb-3">
-                Próximo pequeno passo
-              </label>
-              {selectedTask.nextStep ? (
-                <button
-                  onClick={handleNextStepEdit}
-                  className="w-full px-6 py-4 bg-theme-sidebar border border-theme-border rounded-lg text-left text-lg text-theme-text hover:border-theme-accent transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
-                >
-                  {selectedTask.nextStep}
-                </button>
-              ) : (
-                <button
-                  onClick={handleNextStepEdit}
-                  className="w-full px-6 py-4 bg-theme-sidebar border border-theme-border border-dashed rounded-lg text-left text-lg text-theme-muted hover:border-theme-accent hover:text-theme-text transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
-                >
-                  Qual é o menor passo possível?
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* Next Subtask */}
         {nextSubtask && (
           <div className="w-full mb-8">
@@ -184,7 +93,7 @@ export function FocusModeView() {
         </div>
 
         {/* Idle State for Pomodoro */}
-        {!isPomodoroActive && !nextSubtask && !selectedTask.nextStep && (
+        {!isPomodoroActive && !nextSubtask && (
           <div className="mt-8 text-center">
             <p className="text-theme-muted text-sm">
               Quando estiver pronto, aperte iniciar.
