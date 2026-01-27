@@ -1,0 +1,13 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignInForm } from "../components/auth/SignInForm";
+
+// Redirect to home if already authenticated
+if (Astro.locals.user?.id) {
+  return Astro.redirect("/");
+}
+---
+
+<Layout title="Sign In - Tarefitas">
+  <SignInForm client:load />
+</Layout>
