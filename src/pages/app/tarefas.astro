@@ -1,0 +1,14 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Dashboard } from '../../components/Dashboard';
+import { AppGuard } from '../../components/auth/AppGuard';
+
+const title = 'Tarefas - Tarefitas';
+const description = 'Gerencie suas tarefas de forma confortável e visual';
+---
+
+<Layout title={title} description={description}>
+  <AppGuard client:load>
+    <Dashboard client:load />
+  </AppGuard>
+</Layout>

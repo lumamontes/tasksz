@@ -1,11 +1,90 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import { LandingCTA } from '../components/landing/LandingCTA';
+import { LandingPreview } from '../components/landing/LandingPreview';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const title = 'Tarefitas — Planner para TDAH e Autismo (Calmo e Visual)';
+const description = 'Planner neurodivergente para TDAH e autismo: tarefas com subtarefas, pomodoro gentil e personalização visual. Simples, confortável e sem pressão.';
+const url = Astro.url;
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- SEO Meta Tags -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="keywords" content="planner para TDAH, planner neurodivergente, autismo, tarefas, pomodoro, organização visual" />
+    
+    <!-- Canonical URL -->
+    <!-- <link rel="canonical" href="https://yourdomain.com" /> -->
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={url} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:locale" content="pt_BR" />
+    <!-- <meta property="og:image" content="https://yourdomain.com/og-image.png" /> -->
+    
+    <!-- Twitter Card -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={url} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+    <!-- <meta property="twitter:image" content="https://yourdomain.com/og-image.png" /> -->
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#5F6D73" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <meta name="generator" content={Astro.generator} />
+    
+    <style>
+      @import url('../styles/global.css');
+    </style>
+  </head>
+  <body class="bg-theme-bg font-sans text-theme-text antialiased min-h-screen">
+    <main class="min-h-screen bg-theme-bg flex items-center justify-center p-4 md:p-8">
+      <div class="max-w-7xl w-full grid lg:grid-cols-2 gap-8 md:gap-16 items-center">
+        <!-- Left: Hero Content -->
+        <section class="text-center lg:text-left">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-theme-text mb-4 leading-tight">
+            Planner para TDAH e autismo, feito para não sobrecarregar.
+          </h1>
+          <p class="text-lg md:text-xl text-theme-muted mb-6 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+            Organize tarefas e foco com uma experiência calma, visual e personalizável — no seu tempo, do seu jeito.
+          </p>
+          <p class="text-sm text-theme-muted mb-8 max-w-xl mx-auto lg:mx-0">
+            Subtarefas, progresso e pomodoro gentil (com sons opcionais).
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-4">
+            <LandingCTA variant="primary" href="/onboarding/nome" client:visible>
+              Começar :)
+            </LandingCTA>
+            <a 
+              href="/app/tarefas" 
+              class="text-theme-muted hover:text-theme-text transition-colors text-sm underline"
+            >
+              Entrar
+            </a>
+          </div>
+          <p class="text-xs text-theme-muted">
+            Sem pressão. Sem streaks.
+          </p>
+        </section>
+
+        <!-- Right: Live Preview Component -->
+        <section class="flex items-center justify-center">
+          <LandingPreview client:visible />
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

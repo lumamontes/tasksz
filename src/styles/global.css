@@ -1,0 +1,314 @@
+/* Font imports - must come before @theme */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+
+/* OpenDyslexic font - served locally if available */
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('/fonts/OpenDyslexic-Regular.woff2') format('woff2'),
+       url('/fonts/OpenDyslexic-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+@theme {
+  /* Dynamic CSS Variables for Theming */
+  --bg: #f8f7f4;
+  --panel: #ffffff;
+  --sidebar: #fefefe;
+  --text: #2d3436;
+  --muted: #636e72;
+  --accent: #6c5ce7;
+  --border: #dfe6e9;
+  
+  /* Dynamic Font Variables */
+  --font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-base: 16px;
+  
+  /* Font Families */
+  --font-sans: var(--font-family);
+  --font-mono: 'Azeret Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+
+  /* Primary Colors - Calming Blue-Gray */
+  --color-primary-50: #f0f2f3;
+  --color-primary-100: #e1e5e7;
+  --color-primary-200: #c3cbcf;
+  --color-primary-300: #a5b1b7;
+  --color-primary-400: #7b8a91;
+  --color-primary-500: #5f6d73;
+  --color-primary-600: #4a575c;
+  --color-primary-700: #3d474b;
+  --color-primary-800: #2f373a;
+  --color-primary-900: #1f2528;
+
+  /* Secondary Colors - Warm Peach/Cream Tones */
+  --color-secondary-50: #fef9f3;
+  --color-secondary-100: #fdf3e7;
+  --color-secondary-200: #fbe7cf;
+  --color-secondary-300: #f9dbb7;
+  --color-secondary-400: #f2cea2;
+  --color-secondary-500: #d99f6c;
+  --color-secondary-600: #a66844;
+  --color-secondary-700: #8d5637;
+  --color-secondary-800: #744429;
+  --color-secondary-900: #5b321b;
+
+  /* Accent Colors - Deep Brown */
+  --color-accent-50: #f5ede8;
+  --color-accent-100: #ebdbd1;
+  --color-accent-200: #d7b7a3;
+  --color-accent-300: #c39375;
+  --color-accent-400: #9d5a3f;
+  --color-accent-500: #733d29;
+  --color-accent-600: #5c3121;
+  --color-accent-700: #452519;
+  --color-accent-800: #2e1911;
+  --color-accent-900: #170d08;
+
+  /* Neutral Grays */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
+  /* Semantic Colors - Success */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+  --color-success-800: #166534;
+  --color-success-900: #14532d;
+
+  /* Semantic Colors - Warning */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* Semantic Colors - Error */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
+  --color-error-900: #7f1d1d;
+
+  /* Semantic Colors - Info */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+
+  /* Custom Color Aliases for existing class names */
+  --color-cream-light: #fbe7cf;  /* secondary-200 */
+  --color-slate: #5f6d73;        /* primary-500 */
+
+  /* Font Sizes */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px */
+  --text-4xl: 2.25rem;    /* 36px */
+
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  /* Letter Spacing */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+
+  /* Spacing Scale (8px grid) */
+  --spacing-px: 1px;
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;   /* 4px */
+  --spacing-2: 0.5rem;    /* 8px */
+  --spacing-3: 0.75rem;   /* 12px */
+  --spacing-4: 1rem;      /* 16px */
+  --spacing-5: 1.25rem;   /* 20px */
+  --spacing-6: 1.5rem;    /* 24px */
+  --spacing-8: 2rem;      /* 32px */
+  --spacing-10: 2.5rem;   /* 40px */
+  --spacing-12: 3rem;     /* 48px */
+  --spacing-16: 4rem;     /* 64px */
+  --spacing-20: 5rem;     /* 80px */
+  --spacing-24: 6rem;     /* 96px */
+  --spacing-32: 8rem;     /* 128px */
+
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-sm: 0.125rem;    /* 2px */
+  --radius: 0.25rem;         /* 4px */
+  --radius-md: 0.375rem;     /* 6px */
+  --radius-lg: 0.5rem;       /* 8px */
+  --radius-xl: 0.75rem;      /* 12px */
+  --radius-2xl: 1rem;        /* 16px */
+  --radius-3xl: 1.5rem;      /* 24px */
+  --radius-full: 9999px;     /* Full circle */
+
+  /* Box Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+
+  /* Transition Timing Functions */
+  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Accessibility: Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus Ring Utilities */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus {
+  outline: 2px solid var(--color-primary-300);
+  outline-offset: 2px;
+}
+
+.motion-reduce {
+  @media (prefers-reduced-motion: reduce) {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Screen Reader Only Content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Enhanced focus indicators for better accessibility */
+.focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-primary-500: #000000;
+    --color-secondary-500: #444444;
+    --color-neutral-200: #e0e0e0;
+  }
+}
+
+/* Theme-based utility classes */
+.bg-theme-bg { background-color: var(--bg); }
+.bg-theme-panel { background-color: var(--panel); }
+.bg-theme-sidebar { background-color: var(--sidebar); }
+.text-theme-text { color: var(--text); }
+.text-theme-muted { color: var(--muted); }
+.bg-theme-accent { background-color: var(--accent); }
+.text-theme-accent { color: var(--accent); }
+.border-theme-border { border-color: var(--border); }
+
+/* Global typography using dynamic variables */
+html {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--text);
+  background-color: var(--bg);
+}
+
+/* Density utilities */
+.density-cozy .space-y-1 > * + * { margin-top: 0.75rem; }
+.density-cozy .space-y-2 > * + * { margin-top: 1rem; }
+.density-cozy .space-y-3 > * + * { margin-top: 1.25rem; }
+.density-cozy .space-y-4 > * + * { margin-top: 1.5rem; }
+
+.density-compact .space-y-1 > * + * { margin-top: 0.25rem; }
+.density-compact .space-y-2 > * + * { margin-top: 0.5rem; }
+.density-compact .space-y-3 > * + * { margin-top: 0.75rem; }
+.density-compact .space-y-4 > * + * { margin-top: 1rem; }
+
+.density-compact .p-2 { padding: 0.375rem; }
+.density-compact .p-3 { padding: 0.5rem; }
+.density-compact .p-4 { padding: 0.75rem; }
+.density-compact .p-6 { padding: 1rem; }
+
+.density-cozy .p-2 { padding: 0.5rem; }
+.density-cozy .p-3 { padding: 0.75rem; }
+.density-cozy .p-4 { padding: 1rem; }
+.density-cozy .p-6 { padding: 1.5rem; }

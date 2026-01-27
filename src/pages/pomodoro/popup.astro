@@ -1,0 +1,13 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { MiniPomodoroPopup } from '../../components/pomodoro/MiniPomodoroPopup';
+
+const title = 'Pomodoro Timer - Tarefitas';
+const description = 'Mini Pomodoro Timer';
+---
+
+<Layout title={title} description={description}>
+  <div class="min-h-screen bg-theme-bg flex items-center justify-center p-4">
+    <MiniPomodoroPopup client:load />
+  </div>
+</Layout>
