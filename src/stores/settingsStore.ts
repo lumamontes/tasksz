@@ -19,6 +19,23 @@ export interface CustomPalette {
   border: string;      // subtle separators
 }
 
+export interface NDSettings {
+  stimLevel: 'understimulated' | 'optimal' | 'overstimulated';
+  focusMode: 'hyperfocus-protection' | 'attention-support';
+  changeAnxiety: 'high' | 'medium' | 'low';
+  executiveLoad: 'minimal' | 'standard' | 'complex';
+  animationIntensity: 'none' | 'minimal' | 'standard';
+  colorContrast: 'soft' | 'medium' | 'high';
+  texturePatterns: boolean;
+  focusRingStyle: 'subtle' | 'bold' | 'custom';
+  celebrationStyle: 'none' | 'minimal' | 'full';
+  streakTracking: boolean;
+  contextReminders: boolean;
+  routineTemplates: boolean;
+  randomizeOrder: boolean;
+  hyperfocusBreaks: boolean;
+}
+
 export interface SettingsState {
   themeId: ThemeId;
   customPalette: CustomPalette;
@@ -32,6 +49,7 @@ export interface SettingsState {
   soundVolume: number;
   tickSoundEnabled: boolean;
   focusModeEnabled: boolean; // Focus mode toggle
+  ndSettings: NDSettings;
   pomodoro: {
     focusMinutes: number;
     shortBreakMinutes: number;
@@ -71,6 +89,24 @@ const themePalettes: Record<Exclude<ThemeId, 'custom'>, CustomPalette> = {
   }
 };
 
+// Default ND settings
+const defaultNDSettings: NDSettings = {
+  stimLevel: 'optimal',
+  focusMode: 'attention-support',
+  changeAnxiety: 'medium',
+  executiveLoad: 'standard',
+  animationIntensity: 'minimal',
+  colorContrast: 'medium',
+  texturePatterns: false,
+  focusRingStyle: 'subtle',
+  celebrationStyle: 'minimal',
+  streakTracking: true,
+  contextReminders: true,
+  routineTemplates: true,
+  randomizeOrder: false,
+  hyperfocusBreaks: true
+};
+
 // Default settings
 const defaultSettings: SettingsState = {
   themeId: 'calm-beige',
@@ -95,6 +131,7 @@ const defaultSettings: SettingsState = {
   soundVolume: 0.6,
   tickSoundEnabled: false,
   focusModeEnabled: false,
+  ndSettings: defaultNDSettings,
   pomodoro: {
     focusMinutes: 25,
     shortBreakMinutes: 5,
@@ -108,7 +145,7 @@ export const $settings = atom<SettingsState>(defaultSettings);
 export const $currentSection = atom<Section | 'configuracoes'>('tasks');
 export const $previousSettings = atom<SettingsState | null>(null);
 
-// Theme and font application
+// Theme and font application with ND settings
 export function applyTheme(settings: SettingsState) {
   if (typeof document === 'undefined') return;
   
@@ -128,6 +165,7 @@ export function applyTheme(settings: SettingsState) {
     root.style.setProperty('--muted', defaultPalette.mutedText);
     root.style.setProperty('--accent', defaultPalette.accent);
     root.style.setProperty('--border', defaultPalette.border);
+    applyNDSettings(settings);
     return;
   }
   
@@ -139,6 +177,75 @@ export function applyTheme(settings: SettingsState) {
   root.style.setProperty('--muted', palette.mutedText);
   root.style.setProperty('--accent', palette.accent);
   root.style.setProperty('--border', palette.border);
+  
+  // Apply ND-specific settings
+  applyNDSettings(settings);
+}
+
+// Apply ND-specific settings as CSS variables and classes
+export function applyNDSettings(settings: SettingsState) {
+  if (typeof document === 'undefined') return;
+  
+  const ndSettings = settings.ndSettings || defaultNDSettings;
+  const root = document.documentElement;
+  
+  // Animation intensity
+  if (ndSettings.animationIntensity === 'none') {
+    root.style.setProperty('--transition-duration', '0ms');
+    root.style.setProperty('--animation-duration', '0ms');
+    document.body.classList.add('no-animations');
+  } else if (ndSettings.animationIntensity === 'minimal') {
+    root.style.setProperty('--transition-duration', '150ms');
+    root.style.setProperty('--animation-duration', '300ms');
+    document.body.classList.remove('no-animations');
+  } else {
+    root.style.setProperty('--transition-duration', '200ms');
+    root.style.setProperty('--animation-duration', '500ms');
+    document.body.classList.remove('no-animations');
+  }
+  
+  // Color contrast adjustments
+  if (ndSettings.colorContrast === 'high') {
+    root.style.setProperty('--border-opacity', '1');
+    root.style.setProperty('--text-contrast', '1');
+  } else if (ndSettings.colorContrast === 'soft') {
+    root.style.setProperty('--border-opacity', '0.3');
+    root.style.setProperty('--text-contrast', '0.8');
+  } else {
+    root.style.setProperty('--border-opacity', '0.6');
+    root.style.setProperty('--text-contrast', '0.9');
+  }
+  
+  // Focus ring styles
+  if (ndSettings.focusRingStyle === 'bold') {
+    root.style.setProperty('--focus-ring-width', '3px');
+    root.style.setProperty('--focus-ring-opacity', '0.8');
+  } else if (ndSettings.focusRingStyle === 'subtle') {
+    root.style.setProperty('--focus-ring-width', '1px');
+    root.style.setProperty('--focus-ring-opacity', '0.4');
+  } else {
+    root.style.setProperty('--focus-ring-width', '2px');
+    root.style.setProperty('--focus-ring-opacity', '0.6');
+  }
+  
+  // Texture patterns
+  if (ndSettings.texturePatterns) {
+    document.body.classList.add('texture-patterns');
+  } else {
+    document.body.classList.remove('texture-patterns');
+  }
+  
+  // Executive load complexity
+  document.body.classList.remove('complexity-minimal', 'complexity-standard', 'complexity-complex');
+  document.body.classList.add(`complexity-${ndSettings.executiveLoad}`);
+  
+  // Color contrast mode
+  document.body.classList.remove('contrast-soft', 'contrast-medium', 'contrast-high');
+  document.body.classList.add(`contrast-${ndSettings.colorContrast}`);
+  
+  // Stimulation level
+  document.body.classList.remove('stim-understimulated', 'stim-optimal', 'stim-overstimulated');
+  document.body.classList.add(`stim-${ndSettings.stimLevel}`);
 }
 
 export function applyFont(settings: SettingsState) {
@@ -167,6 +274,18 @@ export function updateSettings(updates: Partial<SettingsState>) {
   $settings.set(updated);
   
   // Apply changes immediately
+  applyTheme(updated);
+  applyFont(updated);
+}
+
+export function updateNDSettings(updates: Partial<NDSettings>) {
+  const current = $settings.get();
+  $previousSettings.set(current);
+  const updated = {
+    ...current,
+    ndSettings: { ...(current.ndSettings || defaultNDSettings), ...updates }
+  };
+  $settings.set(updated);
   applyTheme(updated);
   applyFont(updated);
 }

@@ -57,15 +57,31 @@ const url = Astro.url;
       <div class="max-w-7xl w-full grid lg:grid-cols-2 gap-8 md:gap-16 items-center">
         <!-- Left: Hero Content -->
         <section class="text-center lg:text-left">
+          <div class="mb-6">
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-secondary-100 text-secondary-700 rounded-full text-sm font-medium mb-4">
+              <span>✨</span>
+              <span>Bem-vinde ao Tarefitas!</span>
+            </div>
+          </div>
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-theme-text mb-4 leading-tight">
             Planner para TDAH e autismo, feito para não sobrecarregar.
           </h1>
           <p class="text-lg md:text-xl text-theme-muted mb-6 leading-relaxed max-w-2xl mx-auto lg:mx-0">
             Organize tarefas e foco com uma experiência calma, visual e personalizável — no seu tempo, do seu jeito.
           </p>
-          <p class="text-sm text-theme-muted mb-8 max-w-xl mx-auto lg:mx-0">
-            Subtarefas, progresso e pomodoro gentil (com sons opcionais).
+          <p class="text-sm text-theme-muted mb-6 max-w-xl mx-auto lg:mx-0">
+            Subtarefas, progresso e pomodoro gentil (com sons opcionais). Criado com carinho para mentes neurodivergentes.
           </p>
+          
+          <!-- Welcome Message -->
+          <div class="bg-secondary-50 border border-secondary-200 rounded-lg p-4 mb-6 max-w-xl mx-auto lg:mx-0">
+            <p class="text-sm text-secondary-700 leading-relaxed">
+              <strong>Obrigado por usar o Tarefitas!</strong> 💙<br>
+              Este projeto é feito com muito amor para nossa comunidade neurodivergente. 
+              Para dúvidas, sugestões ou apenas para dizer oi, entre em contato: <strong>oi@tarefitas.com</strong>
+            </p>
+          </div>
+          
           <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-4">
             <LandingCTA variant="primary" client:visible>
               Começar :)
@@ -78,7 +94,7 @@ const url = Astro.url;
             </a>
           </div>
           <p class="text-xs text-theme-muted">
-            Confiável e offline-first.
+            Confiável, offline-first e sempre gratuito.
           </p>
         </section>
 

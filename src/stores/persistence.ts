@@ -91,7 +91,7 @@ export function loadFromLocalStorage(): boolean {
       $taskFilter.set(data.taskFilter);
     }
     
-    // Ensure settings have all required fields, especially customPalette
+    // Ensure settings have all required fields, especially customPalette and ndSettings
     if (data.settings) {
       // Ensure customPalette exists
       if (!data.settings.customPalette || typeof data.settings.customPalette !== 'object') {
@@ -105,6 +105,27 @@ export function loadFromLocalStorage(): boolean {
           border: '#dfe6e9'
         };
       }
+      
+      // Ensure ndSettings exists (migration for existing users)
+      if (!data.settings.ndSettings || typeof data.settings.ndSettings !== 'object') {
+        data.settings.ndSettings = {
+          stimLevel: 'optimal',
+          focusMode: 'attention-support',
+          changeAnxiety: 'medium',
+          executiveLoad: 'standard',
+          animationIntensity: 'minimal',
+          colorContrast: 'medium',
+          texturePatterns: false,
+          focusRingStyle: 'subtle',
+          celebrationStyle: 'minimal',
+          streakTracking: true,
+          contextReminders: true,
+          routineTemplates: true,
+          randomizeOrder: false,
+          hyperfocusBreaks: true
+        };
+      }
+      
       $settings.set(data.settings);
     }
     

@@ -144,6 +144,17 @@ export function deleteTask(id: string) {
 
 export function selectTask(id: string | null) {
   $selectedTaskId.set(id);
+  
+  // Update ND context tracking
+  if (typeof window !== 'undefined' && id) {
+    import('./ndStore').then(({ startTaskContext }) => {
+      startTaskContext(id);
+    });
+  } else if (typeof window !== 'undefined' && !id) {
+    import('./ndStore').then(({ clearTaskContext }) => {
+      clearTaskContext();
+    });
+  }
 }
 
 export function reorderTasks(reorderedTasks: Task[]) {
@@ -191,6 +202,8 @@ export function deleteSubtask(id: string) {
 
 export function toggleSubtaskDone(id: string) {
   const subtasks = $subtasks.get();
+  const targetSubtask = subtasks.find(s => s.id === id);
+  
   const updatedSubtasks = subtasks.map(subtask =>
     subtask.id === id 
       ? { ...subtask, done: !subtask.done }
@@ -198,6 +211,16 @@ export function toggleSubtaskDone(id: string) {
   );
   
   $subtasks.set(updatedSubtasks);
+  
+  // Trigger ND celebration system if subtask was completed
+  if (targetSubtask && !targetSubtask.done) {
+    // Import dynamically to avoid circular dependency
+    if (typeof window !== 'undefined') {
+      import('./ndStore').then(({ recordTaskCompletion }) => {
+        recordTaskCompletion(targetSubtask.taskId);
+      });
+    }
+  }
 }
 
 export function reorderSubtasks(taskId: string, reorderedSubtasks: Subtask[]) {
