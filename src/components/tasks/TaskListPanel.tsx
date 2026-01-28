@@ -21,6 +21,10 @@ export function TaskListPanel({ onTaskSelect, onCreateTask }: TaskListPanelProps
   const filteredTasks = useStore($filteredTasks);
   const selectedTaskId = useStore($selectedTaskId);
   const settings = useStore($settings);
+  
+  // ND-specific behavior based on executive load
+  const executiveLoad = settings.ndSettings?.executiveLoad || 'standard';
+  const isMinimalMode = executiveLoad === 'minimal';
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const listRef = useRef<HTMLDivElement>(null);
@@ -124,15 +128,17 @@ export function TaskListPanel({ onTaskSelect, onCreateTask }: TaskListPanelProps
           </Button>
         </div>
         
-        {/* Search */}
-        <Input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar tarefa…"
-          size="sm"
-          fullWidth
-        />
+        {/* Search - Hidden in minimal mode to reduce cognitive load */}
+        {!isMinimalMode && (
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar tarefa…"
+            size="sm"
+            fullWidth
+          />
+        )}
       </div>
 
       {/* Task List */}
@@ -149,6 +155,7 @@ export function TaskListPanel({ onTaskSelect, onCreateTask }: TaskListPanelProps
           <div className="space-y-2">
             {displayTasks.map((task, index) => {
               const progress = getTaskProgress(task.id);
+              const isCompleted = progress.total > 0 && progress.percentage === 100;
               const isSelected = task.id === selectedTaskId;
               const isFocused = index === focusedIndex;
 
@@ -156,10 +163,10 @@ export function TaskListPanel({ onTaskSelect, onCreateTask }: TaskListPanelProps
                 <button
                   key={task.id}
                   onClick={() => handleTaskClick(task.id)}
-                  className={`w-full text-left p-4 rounded-xl border transition-all ${
-                    settings.reduceMotion ? '' : 'duration-200'
-                  } focus:outline-none focus:ring-2 focus:ring-theme-accent ${
-                    isSelected
+                  className={`w-full text-left p-4 rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-theme-accent ${
+                    isCompleted
+                      ? 'bg-theme-sidebar border-theme-border text-theme-muted opacity-60'
+                      : isSelected
                       ? 'bg-theme-accent/10 border-theme-accent/30 text-theme-text'
                       : isFocused
                       ? 'bg-theme-bg border-theme-border text-theme-text'
@@ -169,19 +176,32 @@ export function TaskListPanel({ onTaskSelect, onCreateTask }: TaskListPanelProps
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-base mb-1 truncate">{task.title}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        {isCompleted && (
+                          <div className="w-5 h-5 rounded-full bg-theme-muted/30 flex items-center justify-center shrink-0">
+                            <svg className="w-3 h-3 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                        <h3 className={`font-medium text-base truncate ${
+                          isCompleted ? 'line-through' : ''
+                        }`}>
+                          {task.title}
+                        </h3>
+                      </div>
                       {task.description && (
-                        <p className="text-sm text-theme-muted line-clamp-2 mb-2">
+                        <p className="text-sm line-clamp-2 mb-2 text-theme-muted">
                           {task.description}
                         </p>
                       )}
-                      {/* Progress bar */}
-                      {settings.showProgressBars && progress.total > 0 && (
+                      {/* Progress bar - Hidden in minimal mode or if user disabled */}
+                      {settings.showProgressBars && progress.total > 0 && !isMinimalMode && (
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex-1 h-1.5 bg-theme-border rounded-full overflow-hidden">
                             <div
-                              className={`h-full bg-theme-accent ${
-                                settings.reduceMotion ? '' : 'transition-all duration-300'
+                              className={`h-full transition-all ${
+                                isCompleted ? 'bg-theme-muted/50' : 'bg-theme-accent'
                               }`}
                               style={{ width: `${progress.percentage}%` }}
                               role="progressbar"

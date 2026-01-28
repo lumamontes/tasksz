@@ -50,58 +50,17 @@ export function CalendarSection({ task }: CalendarSectionProps) {
 
       {isExpanded && (
         <div className="space-y-3 bg-theme-sidebar rounded-xl border border-theme-border p-4">
-          {/* Current association display */}
-          {task.scheduledDate && (
-            <div className="flex items-center justify-between p-3 bg-theme-bg rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-theme-text">Data específica</p>
-                <p className="text-xs text-theme-muted">
-                  {parseDateLocal(task.scheduledDate).toLocaleDateString('pt-BR', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
-              <button
-                onClick={() => updateTask(task.id, { scheduledDate: undefined, recurring: undefined })}
-                className="text-sm text-theme-muted hover:text-red-600 transition-colors"
-                aria-label="Remover associação"
-              >
-                Remover
-              </button>
-            </div>
+          {/* Remove current association */}
+          {hasAssociation && (
+            <button
+              onClick={() => updateTask(task.id, { scheduledDate: undefined, recurring: undefined })}
+              className="w-full text-left px-4 py-3 bg-theme-bg border border-theme-border rounded-lg hover:border-red-600 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-600"
+            >
+              <span className="text-sm font-medium">Remover do calendário</span>
+            </button>
           )}
 
-          {task.recurring && (
-            <div className="flex items-center justify-between p-3 bg-theme-bg rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-theme-text">
-                  {task.recurring.type === 'daily' ? 'Rotina diária' : 'Rotina semanal'}
-                </p>
-                {task.recurring.type === 'weekly' && task.recurring.daysOfWeek && (
-                  <p className="text-xs text-theme-muted">
-                    {task.recurring.daysOfWeek
-                      .map(d => {
-                        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                        return days[d];
-                      })
-                      .join(', ')}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => updateTask(task.id, { scheduledDate: undefined, recurring: undefined })}
-                className="text-sm text-theme-muted hover:text-red-600 transition-colors"
-                aria-label="Remover associação"
-              >
-                Remover
-              </button>
-            </div>
-          )}
-
-          {!task.scheduledDate && !task.recurring && (
+          {!hasAssociation && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-theme-text mb-2">
@@ -136,7 +95,7 @@ export function CalendarSection({ task }: CalendarSectionProps) {
                 <label className="block text-sm font-medium text-theme-text mb-2">
                   Rotina semanal (selecione os dias)
                 </label>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, index) => {
                     const isSelected = task.recurring?.type === 'weekly' && 
                                       task.recurring.daysOfWeek?.includes(index);
@@ -163,7 +122,7 @@ export function CalendarSection({ task }: CalendarSectionProps) {
                             });
                           }
                         }}
-                        className={`px-2 py-2 text-xs font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent ${
+                        className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent min-w-0 flex-shrink-0 ${
                           isSelected
                             ? 'bg-theme-accent text-white'
                             : 'bg-theme-bg text-theme-text border border-theme-border hover:border-theme-accent'

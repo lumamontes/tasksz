@@ -9,12 +9,14 @@ import { TypographySection } from './sections/TypographySection';
 import { AccessibilitySection } from './sections/AccessibilitySection';
 import { SoundSection } from './sections/SoundSection';
 import { DataSection } from './sections/DataSection';
+import { NDSettingsSection } from './NDSettingsSection';
 import { UndoToast } from './UndoToast';
 
 export function SettingsPage() {
   const [expandedSection, setExpandedSection] = useState<string | null>('aparencia');
 
   const sections = [
+    { id: 'neurodivergente', title: 'Recursos Neurodivergentes', component: NDSettingsSection },
     { id: 'aparencia', title: 'Aparência', component: AppearanceSection },
     { id: 'tipografia', title: 'Tipografia', component: TypographySection },
     { id: 'acessibilidade', title: 'Acessibilidade', component: AccessibilitySection },

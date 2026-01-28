@@ -201,9 +201,9 @@ export function CalendarMonthGrid({
   }
 
   return (
-    <div className="h-full flex flex-col" ref={gridRef} role="grid" aria-label={`Calendário de ${MONTHS[month]} ${year}`}>
+    <div className="flex flex-col min-h-0 flex-1" ref={gridRef} role="grid" aria-label={`Calendário de ${MONTHS[month]} ${year}`}>
       {/* Weekday Headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2" role="row">
+      <div className="grid grid-cols-7 gap-2 mb-4" role="row">
         {WEEKDAYS.map((day) => (
           <div
             key={day}
@@ -222,13 +222,13 @@ export function CalendarMonthGrid({
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1 flex-1" role="rowgroup">
+      <div className="grid grid-cols-7 gap-2 flex-1 auto-rows-fr" role="rowgroup">
         {calendarDays.map((cell, index) => {
           if (cell.day === null) {
             return (
               <div
                 key={`empty-${index}`}
-                className="aspect-square"
+                className="min-h-16"
                 aria-hidden="true"
               />
             );

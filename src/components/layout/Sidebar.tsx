@@ -9,6 +9,7 @@ import { $taskFilter, setTaskFilter } from '../../stores/tasksStore';
 import { $user, getUserName } from '../../stores/userStore';
 import { TaskFilters } from '../tasks/TaskFilters';
 import { useState, useEffect } from 'react';
+import { CheckSquare, Calendar, Timer, Settings } from 'lucide-react';
 import type { Section } from '../../types';
 
 export function Sidebar() {
@@ -36,11 +37,11 @@ export function Sidebar() {
   // Format date to match Figma: "Hoje, 12 de fevereiro de 2026"
   const formattedDate = `Hoje, ${currentDate.split(',')[1]?.trim()}`;
 
-  const sections: Array<{ id: Section | 'configuracoes'; label: string }> = [
-    { id: 'tasks', label: 'Tarefas' },
-    { id: 'calendar', label: 'Calendário' },
-    { id: 'pomodoro', label: 'Pomodoro' },
-    { id: 'configuracoes', label: 'Configurações' }
+  const sections: Array<{ id: Section | 'configuracoes'; label: string; icon: React.ComponentType<any> }> = [
+    { id: 'tasks', label: 'Tarefas', icon: CheckSquare },
+    { id: 'calendar', label: 'Calendário', icon: Calendar },
+    { id: 'pomodoro', label: 'Pomodoro', icon: Timer },
+    { id: 'configuracoes', label: 'Configurações', icon: Settings }
   ];
 
   return (
@@ -56,27 +57,28 @@ export function Sidebar() {
       </div>
 
       {/* Sections */}
-      <nav className="p-6 border-b border-theme-border" role="navigation" aria-label="Seções do aplicativo">
-        <h2 id="sections-heading" className="text-sm font-medium text-theme-text mb-4">
-          Seções
-        </h2>
-        <div className="space-y-2" role="tablist" aria-labelledby="sections-heading">
-          {sections.map(section => (
-            <button
-              key={section.id}
-              onClick={() => setCurrentSection(section.id)}
-              role="tab"
-              aria-selected={currentSection === section.id}
-              aria-controls={`${section.id}-panel`}
-              className={`w-full text-left px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-theme-accent ${
-                currentSection === section.id
-                  ? 'bg-theme-accent/10 text-theme-text'
-                  : 'text-theme-muted hover:bg-theme-bg hover:text-theme-text'
-              }`}
-            >
-              {section.label}
-            </button>
-          ))}
+      <nav className="p-6 border-b border-theme-border" role="navigation" aria-label="Navegação do aplicativo">
+        <div className="space-y-2" role="tablist">
+          {sections.map(section => {
+            const IconComponent = section.icon;
+            return (
+              <button
+                key={section.id}
+                onClick={() => setCurrentSection(section.id)}
+                role="tab"
+                aria-selected={currentSection === section.id}
+                aria-controls={`${section.id}-panel`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-theme-accent ${
+                  currentSection === section.id
+                    ? 'bg-theme-accent/10 text-theme-text'
+                    : 'text-theme-muted hover:bg-theme-bg hover:text-theme-text'
+                }`}
+              >
+                <IconComponent className="w-5 h-5" />
+                <span>{section.label}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
 

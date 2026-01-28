@@ -109,18 +109,8 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
     }
   };
 
-  // Filter subtasks based on overwhelm mode
-  const visibleSubtasks = overwhelmMode
-    ? (() => {
-        const selected = subtasks.find(s => s.id === selectedSubtaskId);
-        const nextIncomplete = subtasks.find(s => !s.done && s.id !== selectedSubtaskId);
-        const visible = selected ? [selected] : [];
-        if (nextIncomplete && !visible.includes(nextIncomplete)) {
-          visible.push(nextIncomplete);
-        }
-        return visible;
-      })()
-    : subtasks;
+  // Show all subtasks by default, overwhelm mode can still be toggled
+  const visibleSubtasks = subtasks;
 
   return (
     <div className="mx-6 mb-6">
@@ -134,21 +124,6 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
             </span>
           )}
         </h2>
-        {subtasks.length > 0 && (
-          <button
-            onClick={() => setOverwhelmMode(!overwhelmMode)}
-            className={`
-              text-xs px-3 py-1 rounded-lg transition-colors
-              ${overwhelmMode
-                ? 'bg-theme-accent/20 text-theme-accent'
-                : 'bg-theme-sidebar text-theme-muted hover:text-theme-text'
-              }
-            `}
-            aria-label={overwhelmMode ? 'Desativar modo reduzido' : 'Ativar modo reduzido'}
-          >
-            {overwhelmMode ? 'Modo reduzido' : 'Modo normal'}
-          </button>
-        )}
       </div>
 
       {/* Add Subtask Input */}
@@ -221,11 +196,6 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
               onSelect={() => setSelectedSubtaskId(subtask.id)}
             />
           ))}
-          {overwhelmMode && subtasks.length > visibleSubtasks.length && (
-            <div className="text-center py-2 text-xs text-theme-muted">
-              + {subtasks.length - visibleSubtasks.length} mais
-            </div>
-          )}
         </div>
       )}
     </div>

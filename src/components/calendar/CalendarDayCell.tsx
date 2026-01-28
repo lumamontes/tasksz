@@ -46,7 +46,7 @@ export function CalendarDayCell({
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
   
   // Determine cell styling based on state
-  let cellClasses = 'aspect-square p-2 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-theme-accent focus:ring-offset-2 ';
+  let cellClasses = 'min-h-16 p-2 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-theme-accent focus:ring-offset-2 ';
   
   if (isSelected) {
     cellClasses += 'bg-theme-accent/20 border-theme-accent text-theme-text font-semibold ';
@@ -91,30 +91,19 @@ export function CalendarDayCell({
           {day}
         </span>
         
-        {/* Task Indicator - Simple dot or count */}
+        {/* Task Indicator - Visible badge */}
         {hasTasks && (
           <div className="mt-1 flex items-center justify-center">
-            {taskCount <= 9 ? (
-              // Show count badge for 1-9
-              <span
-                className={`text-xs font-medium ${
-                  isSelected ? 'text-theme-accent' : 'text-theme-muted'
-                }`}
-                aria-hidden="true"
-              >
-                {taskCount}
-              </span>
-            ) : (
-              // Show 9+ for 10 or more
-              <span
-                className={`text-xs font-medium ${
-                  isSelected ? 'text-theme-accent' : 'text-theme-muted'
-                }`}
-                aria-hidden="true"
-              >
-                9+
-              </span>
-            )}
+            <span
+              className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                isSelected 
+                  ? 'bg-theme-accent text-white' 
+                  : 'bg-secondary-400 text-white'
+              }`}
+              aria-hidden="true"
+            >
+              {taskCount <= 9 ? taskCount : '9+'}
+            </span>
           </div>
         )}
       </div>

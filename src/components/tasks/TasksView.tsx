@@ -6,19 +6,54 @@
 import { useStore } from '@nanostores/react';
 import { $tasks, $selectedTaskId, selectTask, addTask, updateTask, deleteTask } from '../../stores/tasksStore';
 import { $settings } from '../../stores/settingsStore';
+import { $contextState, shouldShowCelebration, getCelebrationLevel, $streakMessage } from '../../stores/ndStore';
 import { TaskDetail } from './TaskDetail';
 import { TaskDetailEmpty } from './TaskDetailEmpty';
 import { TaskListPanel } from './TaskListPanel';
 import { TaskForm } from './TaskForm';
-import { useState } from 'react';
+import { CelebrationOverlay } from '../celebration/CelebrationOverlay';
+import { ResizableHandle } from '../ui/ResizableHandle';
+import { useResizablePanels } from '../../hooks/useResizablePanels';
+import { useState, useEffect } from 'react';
 import type { Task } from '../../types';
 
 export function TasksView() {
   const tasks = useStore($tasks);
   const selectedTaskId = useStore($selectedTaskId);
   const settings = useStore($settings);
+  const contextState = useStore($contextState);
+  const streakMessage = useStore($streakMessage);
+  
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationLevel, setCelebrationLevel] = useState<'small' | 'medium' | 'large'>('small');
+
+  // Resizable panels functionality
+  const {
+    leftPanelWidth,
+    isResizing,
+    containerRef,
+    startResize,
+    handleKeyDown
+  } = useResizablePanels({
+    defaultLeftWidth: 320,
+    minLeftWidth: 280,
+    maxLeftWidth: 600,
+    storageKey: 'task-panels-width'
+  });
+
+  // Handle task completion celebrations
+  useEffect(() => {
+    if (shouldShowCelebration()) {
+      setCelebrationLevel(getCelebrationLevel());
+      setShowCelebration(true);
+    }
+  }, [contextState.totalCompletions]);
+
+  const handleCelebrationComplete = () => {
+    setShowCelebration(false);
+  };
 
   const selectedTask = selectedTaskId 
     ? tasks.find(t => t.id === selectedTaskId) 
@@ -85,21 +120,38 @@ export function TasksView() {
   // Desktop: 3-column layout (Sidebar already rendered) + TaskListPanel + TaskDetailPanel
   return (
     <div data-section="tasks" className="h-full">
-      {/* Desktop: 2-column (TaskListPanel + TaskDetailPanel) */}
-      <div className="hidden lg:flex h-full overflow-hidden">
-        {/* Task List Panel (Left) */}
-        <div className={`w-80 shrink-0 ${
-          settings.reduceMotion ? '' : 'transition-all duration-300 ease-out'
-        } ${selectedTaskId ? '' : 'flex-1'}`}>
+      {/* Celebration Overlay */}
+      <CelebrationOverlay
+        show={showCelebration}
+        level={celebrationLevel}
+        message={streakMessage || 'Parabéns!'}
+        onComplete={handleCelebrationComplete}
+      />
+      {/* Desktop: Resizable 2-column (TaskListPanel + TaskDetailPanel) */}
+      <div ref={containerRef} className="hidden lg:flex h-full overflow-hidden">
+        {/* Task List Panel (Left) - Resizable */}
+        <div 
+          style={{ width: `${leftPanelWidth}px` }}
+          className={`shrink-0 ${
+            settings.reduceMotion ? '' : 'transition-opacity duration-300 ease-out'
+          }`}
+        >
           <TaskListPanel
             onTaskSelect={handleSelectTask}
             onCreateTask={handleCreateTask}
           />
         </div>
 
-        {/* Task Detail Panel (Right) - Smooth slide in/out */}
+        {/* Resizable Handle */}
+        <ResizableHandle
+          onMouseDown={startResize}
+          onKeyDown={handleKeyDown}
+          isResizing={isResizing}
+        />
+
+        {/* Task Detail Panel (Right) - Flexible width */}
         <div
-          className={`flex-1 border-l border-theme-border bg-theme-panel ${
+          className={`flex-1 min-w-0 bg-theme-panel ${
             settings.reduceMotion
               ? ''
               : 'transition-all duration-300 ease-out'

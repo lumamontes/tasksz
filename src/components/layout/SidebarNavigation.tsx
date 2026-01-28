@@ -6,15 +6,15 @@
 import { useStore } from '@nanostores/react';
 import { $currentSection, setCurrentSection } from '../../stores/settingsStore';
 import type { Section } from '../../types';
-
+  import { CheckSquare, Calendar, Timer, Settings } from 'lucide-react';
 export function SidebarNavigation() {
   const currentSection = useStore($currentSection);
 
-  const sections: Array<{ id: Section | 'configuracoes'; label: string }> = [
-    { id: 'tasks', label: 'Tarefas' },
-    { id: 'calendar', label: 'Calendário' },
-    { id: 'pomodoro', label: 'Pomodoro' },
-    { id: 'configuracoes', label: 'Configurações' }
+  const sections: Array<{ id: Section | 'configuracoes'; label: string, icon: React.ReactNode }> = [
+    { id: 'tasks', label: 'Tarefas' , icon: <CheckSquare /> },
+    { id: 'calendar', label: 'Calendário', icon: <Calendar /> },
+    { id: 'pomodoro', label: 'Pomodoro', icon: <Timer /> },
+    { id: 'configuracoes', label: 'Configurações', icon: <Settings /> }
   ];
 
   return (
@@ -32,6 +32,7 @@ export function SidebarNavigation() {
               : 'text-theme-muted hover:bg-theme-bg hover:text-theme-text'
           }`}
         >
+          <span className="inline-flex mr-2 align-middle">{section.icon}</span>
           {section.label}
         </button>
       ))}

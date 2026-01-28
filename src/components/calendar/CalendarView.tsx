@@ -10,6 +10,8 @@ import { useStore } from '@nanostores/react';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarMonthGrid } from './CalendarMonthGrid';
 import { CalendarDayPanel } from './CalendarDayPanel';
+import { ResizableHandle } from '../ui/ResizableHandle';
+import { useResizablePanels } from '../../hooks/useResizablePanels';
 import { $settings } from '../../stores/settingsStore';
 import { getTodayString, parseDateLocal } from '../../utils/dateUtils';
 
@@ -21,6 +23,20 @@ export function CalendarView() {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
   const [isMobileView, setIsMobileView] = useState(false);
+
+  // Resizable panels for desktop view
+  const {
+    leftPanelWidth,
+    isResizing,
+    containerRef,
+    startResize,
+    handleKeyDown
+  } = useResizablePanels({
+    defaultLeftWidth: 700,
+    minLeftWidth: 600,
+    maxLeftWidth: 900,
+    storageKey: 'calendar-panels-width'
+  });
 
   // Initialize selected date from localStorage or today
   useEffect(() => {
@@ -56,10 +72,12 @@ export function CalendarView() {
     }
   }, [selectedDate]);
 
-  // Detect mobile view
+  // Detect mobile view - use smaller breakpoint for better two-panel experience
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobileView(window.innerWidth < 1024);
+      const width = window.innerWidth;
+      const shouldBeMobile = width < 768;
+      setIsMobileView(shouldBeMobile);
     };
     
     checkMobile();
@@ -111,36 +129,85 @@ export function CalendarView() {
   };
 
   const transitionClass = settings.reduceMotion ? '' : 'transition-all duration-300';
-  const paddingClass = settings.density === 'compact' ? 'p-4 lg:p-6' : 'p-6 lg:p-8';
+  const paddingClass = settings.density === 'compact' ? 'p-4' : 'p-6';
 
+  // Mobile view: single column
+  if (isMobileView) {
+    return (
+      <div 
+        data-section="calendar" 
+        className={`h-full flex flex-col bg-theme-panel overflow-hidden ${transitionClass}`}
+      >
+        <div className={`${paddingClass} overflow-y-auto`}>
+          <CalendarHeader
+            year={currentYear}
+            month={currentMonth}
+            onPreviousMonth={handlePreviousMonth}
+            onNextMonth={handleNextMonth}
+            onToday={handleToday}
+          />
+          
+          <CalendarMonthGrid
+            year={currentYear}
+            month={currentMonth}
+            selectedDate={selectedDate}
+            onDateSelect={handleDateSelect}
+            onMonthChange={handleMonthChange}
+          />
+        </div>
+
+        {/* Mobile Day Panel - Show when date selected */}
+        {selectedDate && (
+          <div className="border-t border-theme-border bg-theme-sidebar">
+            <CalendarDayPanel dateStr={selectedDate} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop view: resizable two-panel layout
   return (
     <div 
+      ref={containerRef}
       data-section="calendar" 
-      className={`h-full flex flex-col lg:flex-row bg-theme-panel overflow-hidden ${transitionClass}`}
+      className={`h-full flex bg-theme-panel overflow-hidden ${transitionClass}`}
     >
-      {/* Month View - Left Side (Desktop) / Full (Mobile) */}
-      <div className={`lg:w-2/3 lg:border-r lg:border-theme-border ${paddingClass} overflow-y-auto`}>
-        <CalendarHeader
-          year={currentYear}
-          month={currentMonth}
-          onPreviousMonth={handlePreviousMonth}
-          onNextMonth={handleNextMonth}
-          onToday={handleToday}
-        />
+      {/* Calendar Panel - Left Side (Resizable) */}
+      <div 
+        style={{ width: `${leftPanelWidth}px` }}
+        className={`shrink-0 flex flex-col bg-theme-panel border-r border-theme-border`}
+      >
+        <div className={`${paddingClass} shrink-0`}>
+          <CalendarHeader
+            year={currentYear}
+            month={currentMonth}
+            onPreviousMonth={handlePreviousMonth}
+            onNextMonth={handleNextMonth}
+            onToday={handleToday}
+          />
+        </div>
         
-        <CalendarMonthGrid
-          year={currentYear}
-          month={currentMonth}
-          selectedDate={selectedDate}
-          onDateSelect={handleDateSelect}
-          onMonthChange={handleMonthChange}
-        />
+        <div className={`flex-1 min-h-0 ${paddingClass} pt-0`}>
+          <CalendarMonthGrid
+            year={currentYear}
+            month={currentMonth}
+            selectedDate={selectedDate}
+            onDateSelect={handleDateSelect}
+            onMonthChange={handleMonthChange}
+          />
+        </div>
       </div>
 
-      {/* Day Panel - Right Side (Desktop) / Hidden on Mobile (shown via modal/slide) */}
-      <div className={`lg:w-1/3 lg:border-l lg:border-theme-border ${
-        isMobileView && selectedDate ? 'hidden' : ''
-      }`}>
+      {/* Resizable Handle */}
+      <ResizableHandle
+        onMouseDown={startResize}
+        onKeyDown={handleKeyDown}
+        isResizing={isResizing}
+      />
+
+      {/* Day Details Panel - Right Side */}
+      <div className="flex-1 min-w-0 bg-theme-sidebar">
         <CalendarDayPanel dateStr={selectedDate} />
       </div>
     </div>

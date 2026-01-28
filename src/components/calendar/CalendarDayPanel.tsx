@@ -95,22 +95,32 @@ export function CalendarDayPanel({ dateStr }: CalendarDayPanelProps) {
 
   if (!dateStr) {
     return (
-      <div className="h-full flex items-center justify-center bg-theme-panel">
-        <p className={`text-theme-muted text-center px-8 ${
-          settings.fontScale === 'sm' ? 'text-sm' :
-          settings.fontScale === 'lg' ? 'text-base' :
-          settings.fontScale === 'xl' ? 'text-lg' :
-          'text-sm'
-        }`}>
-          Selecione um dia para ver as tarefas associadas
-        </p>
+      <div className="h-full flex flex-col items-center justify-center bg-theme-sidebar p-8">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-6 bg-secondary-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-theme-text mb-2">
+            Detalhes do Dia
+          </h3>
+          <p className="text-theme-muted mb-4">
+            Selecione um dia no calendário para ver as tarefas e eventos associados a essa data.
+          </p>
+          <div className="text-sm text-theme-muted space-y-1">
+            <p>📅 Tarefas agendadas</p>
+            <p>🔄 Rotinas recorrentes</p>
+            <p>✅ Progresso do dia</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      <div className="h-full overflow-y-auto bg-theme-panel">
+      <div className="h-full overflow-y-auto bg-theme-sidebar">
         <div className={paddingClass}>
           {/* Header */}
           <div className="mb-6">
@@ -176,36 +186,35 @@ export function CalendarDayPanel({ dateStr }: CalendarDayPanelProps) {
 
           {/* Tasks List */}
           {!hasAnyTasks ? (
-            <div className={`bg-theme-sidebar rounded-xl border border-theme-border ${
+            <div className={`bg-theme-bg rounded-xl border border-theme-border ${
               settings.density === 'compact' ? 'p-8' : 'p-12'
             } text-center`}>
-              <svg 
-                className="mx-auto h-12 w-12 text-theme-muted mb-4" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" 
-                />
-              </svg>
-              <p className={`text-theme-muted mb-4 ${
+              <div className="w-16 h-16 mx-auto mb-4 bg-secondary-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </div>
+              <h3 className={`font-semibold text-theme-text mb-2 ${
+                settings.fontScale === 'sm' ? 'text-base' :
+                settings.fontScale === 'lg' ? 'text-lg' :
+                settings.fontScale === 'xl' ? 'text-xl' :
+                'text-base'
+              }`}>
+                Dia livre! 🌟
+              </h3>
+              <p className={`text-theme-muted mb-6 ${
                 settings.fontScale === 'sm' ? 'text-sm' :
                 settings.fontScale === 'lg' ? 'text-base' :
                 settings.fontScale === 'xl' ? 'text-lg' :
                 'text-sm'
               }`}>
-                Nenhuma tarefa associada a esse dia.
+                Nenhuma tarefa associada a esse dia. Que tal aproveitar para descansar ou adicionar algo especial?
               </p>
               <button
                 onClick={() => setShowAssignModal(true)}
-                className={`px-4 py-2 text-sm font-medium text-theme-text bg-theme-sidebar hover:bg-theme-bg border border-theme-border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-accent ${transitionClass}`}
+                className={`px-6 py-3 text-sm font-medium text-white bg-theme-accent hover:opacity-90 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-accent focus:ring-offset-2 ${transitionClass}`}
               >
-                Associar uma tarefa
+                ✨ Adicionar uma tarefa
               </button>
             </div>
           ) : (

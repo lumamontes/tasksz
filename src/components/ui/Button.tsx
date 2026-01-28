@@ -78,7 +78,7 @@ export const Button = React.memo<ButtonProps>((props) => {
   const accessibleLabel = ariaLabel || (typeof children === 'string' ? children : undefined);
 
   // Build class names
-  const baseClasses = 'inline-flex items-center justify-center font-medium transition-colors duration-150 focus-ring motion-reduce';
+  const baseClasses = 'inline-flex items-center justify-center font-medium transition-colors focus-ring motion-reduce';
   const variantClasses = {
     primary: 'bg-theme-accent text-white hover:opacity-90 disabled:bg-theme-border disabled:text-theme-muted',
     secondary: 'bg-theme-panel text-theme-text border border-theme-border hover:bg-theme-sidebar',

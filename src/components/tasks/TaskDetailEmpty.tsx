@@ -1,11 +1,169 @@
 /**
  * TaskDetailEmpty Component
- * Orientation and guidance for users when no task is selected
+ * ND-friendly dashboard when no task is selected
  */
 
+import { useStore } from '@nanostores/react';
+import { $settings } from '../../stores/settingsStore';
+import { $tasks } from '../../stores/tasksStore';
+import { $user, getUserName } from '../../stores/userStore';
+import { TodaysPriorities } from '../executive/TodaysPriorities';
+import { ContextPanel } from '../context/ContextPanel';
+import { EnergyLevelTracker } from '../sensory/EnergyLevelTracker';
+import { GentleProductivityMetrics } from '../metrics/GentleProductivityMetrics';
+import { StreakCounter } from '../celebration/StreakCounter';
 import { Card } from '../ui/Card';
+import { CheckSquare, Calendar, Plus, CheckCircle } from 'lucide-react';
 
 export function TaskDetailEmpty() {
+  const settings = useStore($settings);
+  const tasks = useStore($tasks);
+  const user = useStore($user);
+  
+  // Get user name
+  const userName = getUserName();
+  const isFirstTime = tasks.length === 0;
+  
+  // Show ND dashboard if user has enabled ND features
+  const showNDDashboard = settings.ndSettings?.executiveLoad !== 'complex';
+  
+  if (showNDDashboard) {
+    return (
+      <div className="h-full overflow-y-auto bg-theme-panel">
+        <div className="p-6 space-y-6">
+          {/* Welcome Message */}
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-theme-text mb-2">
+              Painel de Hoje 🌱
+            </h2>
+            <p className="text-theme-muted">
+              Organize seu dia com estrutura e gentileza
+            </p>
+          </div>
+
+          {/* ND Dashboard Components */}
+          <div className="space-y-6">
+            <TodaysPriorities />
+            <ContextPanel />
+            <EnergyLevelTracker />
+            <StreakCounter />
+            <GentleProductivityMetrics />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // First time user experience
+  if (isFirstTime) {
+    return (
+      <div className="h-full overflow-y-auto bg-theme-panel">
+        <div className="p-8">
+          <div className="max-w-2xl mx-auto">
+            {/* Warm Welcome */}
+            <div className="text-center mb-12">
+              <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-theme-accent/20 to-theme-accent/10 rounded-full flex items-center justify-center">
+                <CheckSquare className="w-12 h-12 text-theme-accent" />
+              </div>
+              <h2 className="text-3xl font-bold text-theme-text mb-4">
+                Olá, {userName}! 👋
+              </h2>
+              <p className="text-theme-muted text-lg mb-6">
+                Que bom ter você aqui! Vamos organizar suas tarefas de uma forma simples e eficaz.
+              </p>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-theme-accent/10 text-theme-accent rounded-full text-sm font-medium">
+                <CheckCircle className="w-4 h-4" />
+                <span>Pronto para começar</span>
+              </div>
+            </div>
+
+            {/* Tutorial with Example Task */}
+            <div className="space-y-8">
+              <Card padding="lg" variant="sidebar">
+                <h3 className="text-xl font-semibold text-theme-text mb-6 flex items-center gap-3">
+                  <Plus className="w-6 h-6 text-theme-accent" />
+                  Como funciona
+                </h3>
+                
+                {/* Example Task Component */}
+                <div className="mb-6">
+                  <p className="text-sm text-theme-muted mb-4">Exemplo de como suas tarefas ficarão:</p>
+                  <div className="bg-theme-bg rounded-xl border border-theme-border p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-5 h-5 rounded border-2 border-theme-accent bg-theme-accent flex items-center justify-center">
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      </div>
+                      <span className="text-theme-text font-medium">Organizar meu workspace</span>
+                    </div>
+                    <div className="ml-8 space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-theme-muted">
+                        <div className="w-3 h-3 rounded border border-theme-border"></div>
+                        <span>Limpar mesa</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-theme-muted">
+                        <div className="w-3 h-3 rounded border border-theme-border"></div>
+                        <span>Organizar cabos</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-theme-muted">
+                        <div className="w-3 h-3 rounded border border-theme-border"></div>
+                        <span>Arquivar documentos</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-theme-muted">
+                      <Calendar className="w-3 h-3" />
+                      <span>Hoje, 27 de janeiro de 2026</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <span className="shrink-0 w-8 h-8 rounded-full bg-theme-accent text-white flex items-center justify-center text-sm font-bold">
+                      1
+                    </span>
+                    <div>
+                      <h4 className="font-semibold text-theme-text">Crie sua primeira tarefa</h4>
+                      <p className="text-theme-muted">Use o botão "Nova Tarefa" na barra lateral</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <span className="shrink-0 w-8 h-8 rounded-full bg-theme-accent text-white flex items-center justify-center text-sm font-bold">
+                      2
+                    </span>
+                    <div>
+                      <h4 className="font-semibold text-theme-text">Quebre em pequenos passos</h4>
+                      <p className="text-theme-muted">Adicione subtarefas para facilitar a execução</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <span className="shrink-0 w-8 h-8 rounded-full bg-theme-accent text-white flex items-center justify-center text-sm font-bold">
+                      3
+                    </span>
+                    <div>
+                      <h4 className="font-semibold text-theme-text">Acompanhe seu progresso</h4>
+                      <p className="text-theme-muted">Marque subtarefas concluídas e veja seu avanço</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Encouragement */}
+              <div className="text-center">
+                <p className="text-theme-muted mb-4">
+                  ✨ Você está a um clique de se organizar melhor!
+                </p>
+                <p className="text-sm text-theme-muted">
+                  Comece criando sua primeira tarefa na barra lateral →
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Returning user with no task selected
   return (
     <div className="h-full overflow-y-auto bg-theme-panel">
       <div className="p-8">
@@ -13,121 +171,72 @@ export function TaskDetailEmpty() {
           {/* Welcome Section */}
           <div className="text-center mb-12">
             <div className="w-20 h-20 mx-auto mb-6 bg-theme-sidebar rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+              <CheckSquare className="w-10 h-10 text-theme-accent" />
             </div>
             <h2 className="text-2xl font-semibold text-theme-text mb-3">
-              Bem-vindo ao Gerenciador de Tarefas
+              Olá novamente, {userName}! 👋
             </h2>
             <p className="text-theme-muted text-lg">
-              Selecione uma tarefa na lista ao lado para ver os detalhes, ou crie uma nova tarefa para começar.
+              Selecione uma tarefa na lista ao lado para continuar trabalhando, ou crie uma nova tarefa.
             </p>
           </div>
 
-          {/* Quick Guide */}
+          {/* Quick Stats or Tips */}
           <div className="space-y-6">
             <Card padding="md" variant="sidebar">
               <h3 className="text-lg font-semibold text-theme-text mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Comece rápido
+                <CheckCircle className="w-5 h-5 text-theme-accent" />
+                Dicas para ser mais produtivo
               </h3>
               <ul className="space-y-3 text-theme-text">
-                <li className="flex items-start gap-3">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-theme-accent/10 text-theme-accent flex items-center justify-center text-sm font-semibold mt-0.5">
-                    1
-                  </span>
-                  <div>
-                    <p className="font-medium">Crie uma nova tarefa</p>
-                    <p className="text-sm text-theme-muted">Clique no botão "Nova" na lista de tarefas</p>
-                  </div>
+                <li className="flex items-center gap-3">
+                  <CheckCircle className="w-4 h-4 text-secondary-500" />
+                  <span>Quebre tarefas grandes em passos menores</span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-theme-accent/10 text-theme-accent flex items-center justify-center text-sm font-semibold mt-0.5">
-                    2
-                  </span>
-                  <div>
-                    <p className="font-medium">Adicione subtarefas</p>
-                    <p className="text-sm text-theme-muted">Quebre tarefas grandes em passos menores e mais gerenciáveis</p>
-                  </div>
+                <li className="flex items-center gap-3">
+                  <CheckCircle className="w-4 h-4 text-secondary-500" />
+                  <span>Use o calendário para agendar tarefas</span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-theme-accent/10 text-theme-accent flex items-center justify-center text-sm font-semibold mt-0.5">
-                    3
-                  </span>
-                  <div>
-                    <p className="font-medium">Use o Pomodoro para focar</p>
-                    <p className="text-sm text-theme-muted">Acompanhe seu tempo de foco e faça pausas regulares</p>
-                  </div>
+                <li className="flex items-center gap-3">
+                  <CheckCircle className="w-4 h-4 text-secondary-500" />
+                  <span>Experimente o Pomodoro para manter o foco</span>
                 </li>
               </ul>
             </Card>
 
-            {/* Tips Section */}
+            {/* Today's Focus */}
             <Card padding="md" variant="sidebar">
               <h3 className="text-lg font-semibold text-theme-text mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-                Dicas para melhor produtividade
+                <Calendar className="w-5 h-5 text-theme-accent" />
+                Foco de Hoje
               </h3>
-              <ul className="space-y-2 text-theme-text">
-                <li className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-theme-accent mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm">Quebre tarefas grandes em subtarefas para manter o foco e reduzir a ansiedade de começar</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-theme-accent mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm">Feche os detalhes da tarefa (Escape) quando quiser ver apenas a lista</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-theme-accent mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-sm">Use o timer Pomodoro destacável para manter a consciência do tempo sem distrações</span>
-                </li>
-              </ul>
+              <div className="space-y-3 text-sm text-theme-muted">
+                <p>✨ Escolha uma tarefa importante para começar</p>
+                <p>⏰ Reserve um tempo sem distrações</p>
+                <p>🎯 Celebre cada pequeno progresso</p>
+                <div className="mt-4 p-3 bg-secondary-50 rounded-lg">
+                  <p className="text-secondary-700 text-xs">
+                    <strong>Lembre-se:</strong> Não existe produtividade perfeita. O importante é começar, no seu ritmo.
+                  </p>
+                </div>
+              </div>
             </Card>
 
-            {/* Keyboard Shortcuts */}
+            {/* Quick Actions */}
             <Card padding="md" variant="sidebar">
               <h3 className="text-lg font-semibold text-theme-text mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                </svg>
-                Atalhos de teclado
+                <Plus className="w-5 h-5 text-theme-accent" />
+                Ações Rápidas
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-muted">Navegar tarefas</span>
-                  <kbd className="px-2 py-1 bg-theme-panel border border-theme-border rounded text-theme-text font-mono">
-                    J / K
-                  </kbd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-muted">Fechar detalhes</span>
-                  <kbd className="px-2 py-1 bg-theme-panel border border-theme-border rounded text-theme-text font-mono">
-                    Esc
-                  </kbd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-muted">Modo foco</span>
-                  <kbd className="px-2 py-1 bg-theme-panel border border-theme-border rounded text-theme-text font-mono">
-                    F
-                  </kbd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-theme-muted">Salvar (ao editar)</span>
-                  <kbd className="px-2 py-1 bg-theme-panel border border-theme-border rounded text-theme-text font-mono">
-                    Enter
-                  </kbd>
-                </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <button className="p-3 bg-theme-bg hover:bg-secondary-50 rounded-lg text-left transition-colors">
+                  <div className="font-medium text-theme-text">Nova Tarefa</div>
+                  <div className="text-xs text-theme-muted">Ctrl/Cmd + N</div>
+                </button>
+                <button className="p-3 bg-theme-bg hover:bg-secondary-50 rounded-lg text-left transition-colors">
+                  <div className="font-medium text-theme-text">Pomodoro</div>
+                  <div className="text-xs text-theme-muted">25min + pausa</div>
+                </button>
               </div>
             </Card>
           </div>
