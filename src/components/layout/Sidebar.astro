@@ -9,6 +9,7 @@ import { SidebarNavigation } from './SidebarNavigation';
 import { TaskFilters } from '../tasks/TaskFilters';
 import { $currentSection, $settings } from '../../stores/settingsStore';
 import { $user, getUserName } from '../../stores/userStore';
+import { SITE_METADATA } from '../../utils/constants';
 
 // Get current date in Portuguese
 const currentDate = new Date().toLocaleDateString('pt-BR', {
@@ -25,35 +26,32 @@ const formattedDate = `Hoje, ${currentDate.split(',')[1]?.trim()}`;
   <!-- Header Section -->
   <div class="p-6 border-b border-theme-border">
     <h1 class="text-xl font-semibold text-theme-text mb-2">
-      Bem vinde, <span id="user-name">Pessoa</span> :)
+      Olá :)
     </h1>
     <p class="text-sm text-theme-muted">
       {formattedDate}
     </p>
   </div>
 
-  <!-- Sections Navigation (React island for interactivity) -->
   <nav class="p-6 border-b border-theme-border" role="navigation" aria-label="Seções do aplicativo">
     <SidebarNavigation client:load />
   </nav>
-
-  <!-- Task Filters (only shown when tasks section is active) -->
-  <div id="task-filters-container" class="flex-1 p-6 overflow-y-auto hidden">
-    <h2 id="tasks-heading" class="text-sm font-medium text-theme-text mb-4">
-      Filtros
-    </h2>
-    <TaskFilters client:load />
-  </div>
-
-  <!-- User Avatar -->
-  <div class="p-6 border-t border-theme-border">
-    <div id="user-avatar" class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-theme-accent rounded-full flex items-center justify-center">
-        <span id="user-initial" class="text-sm font-medium text-white">P</span>
-      </div>
-      <span id="user-name-display" class="text-sm font-medium text-theme-text">Pessoa</span>
-    </div>
-  </div>
+  <!-- sidebar footer -->
+   <section class="p-6 border-t border-theme-border mt-auto text-center">
+    <p class="text-sm">
+      <!-- Quer falar com a gente?  -->
+       <p class="text-sm text-theme-muted">
+      fale conosco <a href={`mailto:${SITE_METADATA.contactEmail}`}  class="text-theme-accent hover:text-theme-accent/80 transition duration-200">aqui</a>
+      </p>
+      <!-- Footer Links -->
+      <a href={SITE_METADATA.repoUrl} target="_blank" rel="noopener noreferrer" class="text-sm text-theme-accent hover:text-theme-accent/80 transition duration-200">
+        GitHub
+      </a> <span class="text-sm text-theme-muted">|</span> 
+      <a href={SITE_METADATA.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" class="text-sm text-theme-accent hover:text-theme-accent/80 transition duration-200">
+        Política de Privacidade
+      </a>
+    </p> 
+   </section>
 </div>
 
 <script>

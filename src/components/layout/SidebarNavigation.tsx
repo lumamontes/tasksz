@@ -12,8 +12,6 @@ export function SidebarNavigation() {
 
   const sections: Array<{ id: Section | 'configuracoes'; label: string, icon: React.ReactNode }> = [
     { id: 'tasks', label: 'Tarefas' , icon: <CheckSquare /> },
-    { id: 'calendar', label: 'Calendário', icon: <Calendar /> },
-    { id: 'pomodoro', label: 'Pomodoro', icon: <Timer /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings /> }
   ];
 
