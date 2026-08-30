@@ -5,7 +5,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
 
-/* OpenDyslexic font - served locally if available */
 @font-face {
   font-family: 'OpenDyslexic';
   src: url('/fonts/OpenDyslexic-Regular.woff2') format('woff2'),
@@ -19,20 +18,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* Dynamic CSS Variables for Theming */
-  --bg: #faf9f7;
-  --panel: #fefffe;
-  --sidebar: #faf9f7;
-  --text: #3a3530;
-  --muted: #7a7069;
-  --accent: #a66844;
-  --border: #e8e2d8;
-  
-  /* Dynamic Font Variables */
+  --bg: #f8f7fa;       /* Off-white with a subtle cool violet tint */
+  --panel: #ffffff;    /* Crisp white for elevated containers */
+  --sidebar: #f3f1f7;  /* Slightly deeper cool gray for visual separation */
+  --text: #2d2936;     /* Deep slate-violet for high-contrast legibility */
+  --muted: #6e677a;    /* Muted purple-gray for secondary text */
+  --accent: #6c5ce7;   /* Solid violet accent (removed trailing transparency) */
+  --border: #e3dff0;   /* Soft violet-tinted border to anchor elements */
   --font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-base: 16px;
   
-  /* ND-Specific Variables (set dynamically by JS) */
   --transition-duration: 200ms;
   --animation-duration: 500ms;
   --border-opacity: 0.6;
@@ -40,7 +35,6 @@
   --focus-ring-width: 2px;
   --focus-ring-opacity: 0.6;
   
-  /* Font Families */
   --font-sans: var(--font-family);
   --font-mono: 'Azeret Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
 
@@ -454,7 +448,7 @@ select:focus {
 }
 
 .contrast-high .border-theme-accent\/20 {
-  border-color: rgba(108, 92, 231, 0.4) !important;
+  border-color: #6c5ce766 !important;
 }
 
 /* Soft contrast mode adjustments */

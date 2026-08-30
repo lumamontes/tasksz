@@ -46,3 +46,14 @@ export const DEBOUNCE_TIME = {
   INPUT: 500, // ms
   SEARCH: 800, // ms
 } as const;
+
+export const SITE_METADATA = {
+  title: 'tarefitas',
+  description: 'um simples site pra organizar rotina e tarefas',
+  url: 'https://tarefitas.netlify.app',
+  repoUrl: 'https://github.com/lumamontes/tasksz',
+  privacyPolicyUrl: 'https://tarefitas.netlify.app/privacy-policy',
+  contactEmail: 'lumagoesmontes@gmail.com',
+  image: '/images/logo.png',
+  keywords: ['tarefas', 'rotina', 'organização'],
+} as const;
