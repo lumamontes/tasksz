@@ -2,7 +2,6 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from "@tailwindcss/vite";
-import node from "@astrojs/node";
 
 // https://astro.build/config
 export default defineConfig({
@@ -12,6 +11,13 @@ export default defineConfig({
   integrations: [
     react(),
   ],
+  image: {
+    // Passthrough: the project currently ships SVG-only assets, which should
+    // be served as-is. Switch to sharp if raster optimization is needed later.
+    service: {
+      entrypoint: 'astro/assets/services/noop',
+    },
+  },
   build: {
     inlineStylesheets: 'auto',
   },
