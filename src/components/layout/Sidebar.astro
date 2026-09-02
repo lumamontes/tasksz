@@ -6,9 +6,6 @@
  */
 
 import { SidebarNavigation } from './SidebarNavigation';
-import { TaskFilters } from '../tasks/TaskFilters';
-import { $currentSection, $settings } from '../../stores/settingsStore';
-import { $user, getUserName } from '../../stores/userStore';
 import { SITE_METADATA } from '../../utils/constants';
 
 // Get current date in Portuguese
@@ -37,77 +34,17 @@ const formattedDate = `Hoje, ${currentDate.split(',')[1]?.trim()}`;
     <SidebarNavigation client:load />
   </nav>
   <!-- sidebar footer -->
-   <section class="p-6 border-t border-theme-border mt-auto text-center">
-    <p class="text-sm">
-      <!-- Quer falar com a gente?  -->
-       <p class="text-sm text-theme-muted">
+   <section class="p-6 border-t border-theme-border mt-auto flex flex-col items-center gap-2">
+      <p class="text-sm text-theme-muted">
       fale conosco <a href={`mailto:${SITE_METADATA.contactEmail}`}  class="text-theme-accent hover:text-theme-accent/80 transition duration-200">aqui</a>
       </p>
-      <!-- Footer Links -->
+      <div class="flex items-center justify-center gap-2">
       <a href={SITE_METADATA.repoUrl} target="_blank" rel="noopener noreferrer" class="text-sm text-theme-accent hover:text-theme-accent/80 transition duration-200">
         GitHub
-      </a> <span class="text-sm text-theme-muted">|</span> 
+      </a> <span class="text-sm text-theme-muted">|</span>
       <a href={SITE_METADATA.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" class="text-sm text-theme-accent hover:text-theme-accent/80 transition duration-200">
         Política de Privacidade
       </a>
-    </p> 
+      </div>
    </section>
 </div>
-
-<script>
-  import { $currentSection } from '../../stores/settingsStore';
-  import { $user, getUserName } from '../../stores/userStore';
-  
-  if (typeof window !== 'undefined') {
-    // Update user name and avatar
-    const updateUserInfo = () => {
-      const userName = getUserName();
-      const user = $user.get();
-      const userInitial = userName.charAt(0).toUpperCase();
-      
-      const nameEl = document.getElementById('user-name');
-      const nameDisplayEl = document.getElementById('user-name-display');
-      const initialEl = document.getElementById('user-initial');
-      const avatarEl = document.getElementById('user-avatar');
-      
-      if (nameEl) nameEl.textContent = userName;
-      if (nameDisplayEl) nameDisplayEl.textContent = userName;
-      if (initialEl) initialEl.textContent = userInitial;
-      
-      // Update avatar image if available
-      if (avatarEl && user.profile?.avatarUrl) {
-        const img = avatarEl.querySelector('img');
-        if (img) {
-          img.src = user.profile.avatarUrl;
-          img.alt = userName;
-        } else {
-          const newImg = document.createElement('img');
-          newImg.src = user.profile.avatarUrl;
-          newImg.alt = userName;
-          newImg.className = 'w-10 h-10 rounded-full';
-          const initialDiv = avatarEl.querySelector('.w-10');
-          if (initialDiv) {
-            initialDiv.replaceWith(newImg);
-          }
-        }
-      }
-    };
-    
-    // Show/hide task filters based on current section
-    const updateTaskFilters = () => {
-      const section = $currentSection.get();
-      const filtersContainer = document.getElementById('task-filters-container');
-      if (filtersContainer) {
-        filtersContainer.classList.toggle('hidden', section !== 'tasks');
-      }
-    };
-    
-    // Subscribe to changes
-    $user.subscribe(updateUserInfo);
-    $currentSection.subscribe(updateTaskFilters);
-    
-    // Initial update
-    updateUserInfo();
-    updateTaskFilters();
-  }
-</script>

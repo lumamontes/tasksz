@@ -355,19 +355,7 @@ body {
 .transition-opacity { transition-duration: var(--transition-duration) !important; }
 .transition-transform { transition-duration: var(--transition-duration) !important; }
 
-/* Animation intensity controls */
-.no-animations * {
-  animation-duration: 0ms !important;
-  transition-duration: 0ms !important;
-}
-
-.no-animations *:before,
-.no-animations *:after {
-  animation-duration: 0ms !important;
-  transition-duration: 0ms !important;
-}
-
-/* Focus ring styles using ND variables */
+/* Focus ring styles */
 .focus\:ring-2:focus,
 .focus\:ring-theme-accent:focus,
 button:focus,
@@ -388,74 +376,21 @@ select:focus {
   opacity: var(--text-contrast) !important;
 }
 
-/* Texture patterns for grouping when enabled */
-.texture-patterns .bg-theme-sidebar {
-  background-image: linear-gradient(45deg, transparent 25%, rgba(0,0,0,0.02) 25%, rgba(0,0,0,0.02) 50%, transparent 50%, transparent 75%, rgba(0,0,0,0.02) 75%);
-  background-size: 20px 20px;
+/* react-day-picker theme overrides */
+.daypicker-root {
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: var(--accent);
+  --rdp-today-color: var(--accent);
 }
-
-.texture-patterns .bg-theme-panel {
-  background-image: linear-gradient(90deg, transparent 25%, rgba(0,0,0,0.01) 25%, rgba(0,0,0,0.01) 50%, transparent 50%, transparent 75%, rgba(0,0,0,0.01) 75%);
-  background-size: 30px 30px;
+.daypicker-has-tasks .rdp-day_button::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--accent);
+  margin: 2px auto 0;
 }
-
-/* Executive load complexity adjustments */
-.complexity-minimal .lg\:flex {
-  display: none !important;
-}
-
-.complexity-minimal .grid-cols-2,
-.complexity-minimal .grid-cols-3 {
-  grid-template-columns: 1fr !important;
-}
-
-.complexity-minimal .space-y-6 > *:nth-child(n+3) {
-  display: none;
-}
-
-.complexity-complex .hidden {
-  display: block !important;
-}
-
-.complexity-complex .lg\:hidden {
-  display: none !important;
-}
-
-/* Stimulation level adjustments */
-.body.stim-understimulated {
-  filter: saturate(1.2) contrast(1.1);
-}
-
-.body.stim-overstimulated {
-  filter: saturate(0.8) contrast(0.9);
-  --border-opacity: 0.3;
-  --transition-duration: 100ms;
-}
-
-.body.stim-overstimulated * {
-  text-shadow: none !important;
-  box-shadow: none !important;
-}
-
-/* High contrast mode adjustments */
-.contrast-high {
-  --border-opacity: 1;
-  --text-contrast: 1;
-}
-
-.contrast-high .bg-theme-accent\/10 {
-  background-color: rgba(108, 92, 231, 0.2) !important;
-}
-
-.contrast-high .border-theme-accent\/20 {
-  border-color: #6c5ce766 !important;
-}
-
-/* Soft contrast mode adjustments */
-.contrast-soft .text-theme-text {
-  opacity: 0.85;
-}
-
-.contrast-soft .border-theme-border {
-  border-color: rgba(223, 230, 233, 0.4) !important;
+.daypicker-root .rdp-selected .rdp-day_button::after {
+  background: #fff;
 }

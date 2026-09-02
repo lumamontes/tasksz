@@ -5,12 +5,15 @@
 
 import { atom, computed } from 'nanostores';
 import type { Task, Subtask } from '../types';
+import { getTodayString, parseDateLocal } from '../utils/dateUtils';
 
 // Core state atoms
 export const $tasks = atom<Task[]>([]);
 export const $subtasks = atom<Subtask[]>([]);
 export const $selectedTaskId = atom<string | null>(null);
-export const $taskFilter = atom<'all' | 'today' | 'in-progress' | 'completed' | 'archived'>('all');
+export const $selectedDay = atom<string>(getTodayString());
+export type TaskFilter = 'all' | 'in-progress' | 'completed' | 'archived';
+export const $taskFilter = atom<TaskFilter>('all');
 
 // Computed values
 export const $selectedTask = computed([$tasks, $selectedTaskId], (tasks, selectedId) => {
@@ -48,48 +51,59 @@ export function getTaskProgress(taskId: string) {
   return { completed, total, percentage };
 }
 
-// Filtered tasks based on current filter
-export const $filteredTasks = computed([$tasks, $taskFilter, $subtasks], (tasks, filter, subtasks) => {
-  let filtered = [...tasks];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  switch (filter) {
-    case 'today':
-      // Tasks created today or with subtasks worked on today
-      filtered = filtered.filter(task => {
-        const taskDate = new Date(task.createdAt);
-        taskDate.setHours(0, 0, 0, 0);
-        return taskDate.getTime() === today.getTime();
-      });
-      break;
-    case 'in-progress':
-      // Tasks with at least one incomplete subtask
-      filtered = filtered.filter(task => {
-        const taskSubtasks = subtasks.filter(s => s.taskId === task.id);
-        if (taskSubtasks.length === 0) return false; // No subtasks = not in progress
-        return taskSubtasks.some(s => !s.done);
-      });
-      break;
-    case 'completed':
-      // Tasks where all subtasks are done
-      filtered = filtered.filter(task => {
-        const taskSubtasks = subtasks.filter(s => s.taskId === task.id);
-        if (taskSubtasks.length === 0) return false; // No subtasks = not completed
-        return taskSubtasks.every(s => s.done);
-      });
-      break;
-    case 'archived':
-      filtered = filtered.filter(task => task.archived);
-      break;
-    case 'all':
-    default:
-      filtered = filtered.filter(task => !task.archived);
-      break;
+// Whether a task belongs to a given day (scheduled date or recurring match)
+function matchesDay(task: Task, dateStr: string): boolean {
+  if (task.scheduledDate === dateStr) return true;
+
+  if (task.recurring) {
+    if (task.recurring.type === 'daily') return true;
+    if (task.recurring.type === 'weekly' && task.recurring.daysOfWeek) {
+      const dayOfWeek = parseDateLocal(dateStr).getDay();
+      return task.recurring.daysOfWeek.includes(dayOfWeek);
+    }
   }
-  
-  return filtered;
-});
+
+  return false;
+}
+
+// Filtered tasks based on selected day + current filter
+export const $filteredTasks = computed(
+  [$tasks, $taskFilter, $subtasks, $selectedDay],
+  (tasks, filter, subtasks, selectedDay) => {
+    if (filter === 'archived') {
+      return tasks
+        .filter((task) => task.archived)
+        .slice()
+        .sort((a, b) => a.order - b.order);
+    }
+
+    const dayTasks = tasks.filter((task) => {
+      if (task.archived) return false;
+      if (matchesDay(task, selectedDay)) return true;
+      // Unscheduled tasks are a rolling backlog: they stay visible on any day
+      // (e.g. tasks created without a date reappear on the next day).
+      return !task.scheduledDate && !task.recurring;
+    });
+
+    let result: Task[];
+    if (filter === 'in-progress') {
+      // Everything that isn't fully completed (no-subtask tasks count as active)
+      result = dayTasks.filter((task) => {
+        const taskSubtasks = subtasks.filter((s) => s.taskId === task.id);
+        return !(taskSubtasks.length > 0 && taskSubtasks.every((s) => s.done));
+      });
+    } else if (filter === 'completed') {
+      result = dayTasks.filter((task) => {
+        const taskSubtasks = subtasks.filter((s) => s.taskId === task.id);
+        return taskSubtasks.length > 0 && taskSubtasks.every((s) => s.done);
+      });
+    } else {
+      result = dayTasks;
+    }
+
+    return result.slice().sort((a, b) => a.order - b.order);
+  }
+);
 
 // Selected task index within filtered list
 export const $selectedTaskIndex = computed([$filteredTasks, $selectedTaskId], (filteredTasks, selectedId) => {
@@ -98,8 +112,13 @@ export const $selectedTaskIndex = computed([$filteredTasks, $selectedTaskId], (f
 });
 
 // Action to set filter
-export function setTaskFilter(filter: 'all' | 'today' | 'in-progress' | 'completed' | 'archived') {
+export function setTaskFilter(filter: TaskFilter) {
   $taskFilter.set(filter);
+}
+
+// Action to set the selected day (YYYY-MM-DD)
+export function setSelectedDay(dateStr: string) {
+  $selectedDay.set(dateStr);
 }
 
 // Action functions
@@ -142,19 +161,29 @@ export function deleteTask(id: string) {
   }
 }
 
+// Batch actions (multi-select support)
+export function archiveTasks(ids: string[], archived: boolean) {
+  const tasks = $tasks.get();
+  $tasks.set(
+    tasks.map((task) =>
+      ids.includes(task.id) ? { ...task, archived, updatedAt: new Date() } : task
+    )
+  );
+}
+
+export function setTasksScheduledDate(ids: string[], date?: string) {
+  const tasks = $tasks.get();
+  $tasks.set(
+    tasks.map((task) =>
+      ids.includes(task.id)
+        ? { ...task, scheduledDate: date || undefined, recurring: undefined, updatedAt: new Date() }
+        : task
+    )
+  );
+}
+
 export function selectTask(id: string | null) {
   $selectedTaskId.set(id);
-  
-  // Update ND context tracking
-  if (typeof window !== 'undefined' && id) {
-    import('./ndStore').then(({ startTaskContext }) => {
-      startTaskContext(id);
-    });
-  } else if (typeof window !== 'undefined' && !id) {
-    import('./ndStore').then(({ clearTaskContext }) => {
-      clearTaskContext();
-    });
-  }
 }
 
 export function reorderTasks(reorderedTasks: Task[]) {

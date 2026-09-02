@@ -6,11 +6,11 @@
 import { useStore } from '@nanostores/react';
 import { $currentSection, setCurrentSection } from '../../stores/settingsStore';
 import type { Section } from '../../types';
-  import { CheckSquare, Calendar, Timer, Settings } from 'lucide-react';
+  import { CheckSquare, Settings } from 'lucide-react';
 export function SidebarNavigation() {
   const currentSection = useStore($currentSection);
 
-  const sections: Array<{ id: Section | 'configuracoes'; label: string, icon: React.ReactNode }> = [
+  const sections: Array<{ id: Section; label: string, icon: React.ReactNode }> = [
     { id: 'tasks', label: 'Tarefas' , icon: <CheckSquare /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings /> }
   ];

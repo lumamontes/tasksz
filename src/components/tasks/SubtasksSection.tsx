@@ -5,9 +5,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
-import { $selectedTaskSubtasks, addSubtask, toggleSubtaskDone } from '../../stores/tasksStore';
+import { $selectedTaskSubtasks, addSubtask, toggleSubtaskDone, reorderSubtasks } from '../../stores/tasksStore';
 import { SubtaskRow } from './SubtaskRow';
 import type { Task } from '../../types';
+import { Check, X, Plus } from 'lucide-react';
 
 interface SubtasksSectionProps {
   task: Task;
@@ -26,6 +27,8 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
     return localStorage.getItem(OVERWHELM_MODE_KEY) === 'true';
   });
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Initialize selected subtask to first incomplete
   useEffect(() => {
@@ -109,6 +112,39 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
     }
   };
 
+  const handleDragStartSubtask = (index: number) => (e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setDragIndex(index);
+  };
+
+  const handleDragOverSubtask = (index: number) => (e: React.DragEvent) => {
+    if (dragIndex === null) return;
+    e.preventDefault();
+    if (dragOverIndex !== index) setDragOverIndex(index);
+  };
+
+  const handleDropSubtask = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const reordered = [...subtasks];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(index, 0, moved);
+    reorderSubtasks(task.id, reordered);
+
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEndSubtask = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
   // Show all subtasks by default, overwhelm mode can still be toggled
   const visibleSubtasks = subtasks;
 
@@ -126,7 +162,7 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
         </h2>
       </div>
 
-      {/* Add Subtask Input */}
+      {/* Add Subtask */}
       {isAdding ? (
         <div className="mb-3 flex items-center gap-2">
           <input
@@ -135,21 +171,35 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
             value={newSubtaskTitle}
             onChange={(e) => setNewSubtaskTitle(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddSubtask();
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddSubtask();
+              }
               if (e.key === 'Escape') {
                 setNewSubtaskTitle('');
                 setIsAdding(false);
               }
             }}
-            className="flex-1 text-sm text-theme-text bg-theme-sidebar border border-theme-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-theme-accent"
+            className="flex-1 text-sm text-theme-text bg-theme-bg border border-theme-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-theme-accent focus:border-theme-accent"
             placeholder="Digite o título da subtarefa..."
             autoFocus
           />
           <button
             onClick={handleAddSubtask}
-            className="px-4 py-2 bg-theme-accent text-white rounded-lg text-sm font-medium hover:opacity-90"
+            aria-label="Salvar subtarefa"
+            className="p-2 bg-theme-accent text-white rounded-lg hover:opacity-90 transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent shrink-0"
           >
-            Adicionar
+            <Check className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => {
+              setNewSubtaskTitle('');
+              setIsAdding(false);
+            }}
+            aria-label="Cancelar"
+            className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-bg rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent shrink-0"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       ) : (
@@ -158,9 +208,11 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
             setIsAdding(true);
             setTimeout(() => inputRef.current?.focus(), 0);
           }}
-          className="w-full mb-3 p-3 bg-theme-sidebar border border-dashed border-theme-border rounded-lg text-sm text-theme-muted hover:text-theme-accent hover:border-theme-accent transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
+          aria-label="Adicionar subtarefa"
+          className="mb-3 flex items-center gap-1.5 px-2 py-1.5 text-sm text-theme-muted hover:text-theme-accent hover:bg-theme-sidebar rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
         >
-          + Adicionar subtarefa
+          <Plus className="w-4 h-4" />
+          Adicionar subtarefa
         </button>
       )}
 
@@ -187,14 +239,29 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {visibleSubtasks.map((subtask) => (
-            <SubtaskRow
+          {visibleSubtasks.map((subtask, index) => (
+            <div
               key={subtask.id}
-              subtask={subtask}
-              isSelected={subtask.id === selectedSubtaskId}
-              isOverwhelmMode={overwhelmMode}
-              onSelect={() => setSelectedSubtaskId(subtask.id)}
-            />
+              draggable
+              onDragStart={handleDragStartSubtask(index)}
+              onDragOver={handleDragOverSubtask(index)}
+              onDrop={handleDropSubtask(index)}
+              onDragEnd={handleDragEndSubtask}
+              className={`transition-all ${
+                dragIndex === index
+                  ? 'opacity-40'
+                  : dragOverIndex === index && dragIndex !== null
+                  ? 'ring-2 ring-theme-accent/40 rounded-lg'
+                  : ''
+              }`}
+            >
+              <SubtaskRow
+                subtask={subtask}
+                isSelected={subtask.id === selectedSubtaskId}
+                isOverwhelmMode={overwhelmMode}
+                onSelect={() => setSelectedSubtaskId(subtask.id)}
+              />
+            </div>
           ))}
         </div>
       )}

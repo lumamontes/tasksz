@@ -6,12 +6,10 @@
  */
 
 import Sidebar from './Sidebar.astro';
-import { TasksView } from '../tasks/TasksView';
-import { PomodoroView } from '../pomodoro/PomodoroView';
-import { CalendarView } from '../calendar/CalendarView';
+import TasksArea from './TasksArea.astro';
 import { SettingsPage } from '../settings/SettingsPage';
 import { FocusModeView } from '../focus/FocusModeView';
-import { MiniPomodoro } from '../pomodoro/MiniPomodoro';
+import { CelebrationHost } from '../celebration/CelebrationHost';
 ---
 
 <div id="app-shell" class="flex h-screen bg-theme-bg font-sans text-theme-text overflow-hidden">
@@ -49,15 +47,13 @@ import { MiniPomodoro } from '../pomodoro/MiniPomodoro';
   >
     <!-- Dynamic content based on current section -->
     <div id="main-content-area" class="h-full">
-      <TasksView client:load />
-      <PomodoroView client:load />
-      <CalendarView client:load />
-      <SettingsPage client:load />
+      <TasksArea />
+      <SettingsPage client:visible />
     </div>
   </main>
 
-  <!-- Floating Mini Pomodoro Timer -->
-  <MiniPomodoro client:load />
+  <!-- Task completion celebrations (hydrates on idle) -->
+  <CelebrationHost client:idle />
 </div>
 
 <!-- Focus Mode Overlay (conditionally rendered via React based on settings) -->
@@ -102,7 +98,7 @@ import { MiniPomodoro } from '../pomodoro/MiniPomodoro';
   // Show/hide sections based on current section
   const updateMainContent = () => {
     const section = $currentSection.get();
-    const sections = ['tasks', 'pomodoro', 'calendar', 'configuracoes'];
+    const sections = ['tasks', 'configuracoes'];
     
     sections.forEach(sectionId => {
       const el = document.querySelector(`[data-section="${sectionId}"]`) as HTMLElement;

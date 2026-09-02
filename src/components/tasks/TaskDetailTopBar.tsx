@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { updateTask } from '../../stores/tasksStore';
 import type { Task } from '../../types';
+import { taskToMarkdown } from '../../utils/taskFormat';
 
 interface TaskDetailTopBarProps {
   task: Task;
@@ -33,6 +34,17 @@ export function TaskDetailTopBar({
   canGoNext = false
 }: TaskDetailTopBarProps) {
   const [titleValue, setTitleValue] = useState(task.title);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyContent = async () => {
+    try {
+      await navigator.clipboard.writeText(taskToMarkdown(task));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable — ignore silently
+    }
+  };
 
   const handleTitleSave = () => {
     if (titleValue.trim()) {
@@ -92,6 +104,23 @@ export function TaskDetailTopBar({
         <div className="flex items-center gap-2 shrink-0">
           {!isEditMode && (
             <>
+              <button
+                onClick={handleCopyContent}
+                className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-sidebar rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
+                aria-label="Copiar conteúdo da tarefa"
+                title="Copiar conteúdo"
+              >
+                {copied ? (
+                  <svg className="w-5 h-5 text-theme-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="13" height="13" rx="2" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                  </svg>
+                )}
+              </button>
               <button
                 onClick={() => onEditModeChange(true)}
                 className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-sidebar rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"

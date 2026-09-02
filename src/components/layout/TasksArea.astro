@@ -1,0 +1,30 @@
+---
+/**
+ * TasksArea Component (Astro)
+ * Composes independent React islands for the tasks tab.
+ * Each island subscribes to shared nanostores; only the visible
+ * islands hydrate (client:visible), and the picker/detail/form
+ * chunks load lazily on demand.
+ */
+
+import { TaskListPanel } from '../tasks/TaskListPanel';
+import { ResizableHandle } from '../ui/ResizableHandle';
+import { TasksDetailPane } from '../tasks/TasksDetailPane';
+import { MobileTasks } from '../tasks/MobileTasks';
+---
+
+<div data-section="tasks" class="h-full">
+  <!-- Desktop: resizable 2-column layout -->
+  <div class="hidden lg:flex h-full overflow-hidden">
+    <TaskListPanel desktopResizable={true} client:visible />
+    <ResizableHandle client:visible />
+    <div class="flex-1 min-w-0">
+      <TasksDetailPane client:visible />
+    </div>
+  </div>
+
+  <!-- Mobile: single column -->
+  <div class="lg:hidden h-full">
+    <MobileTasks client:visible />
+  </div>
+</div>

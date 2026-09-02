@@ -8,6 +8,7 @@ import { toggleSubtaskDone, updateSubtask, deleteSubtask } from '../../stores/ta
 import { $settings } from '../../stores/settingsStore';
 import { useStore } from '@nanostores/react';
 import type { Subtask } from '../../types';
+import { Check, X } from 'lucide-react';
 
 interface SubtaskRowProps {
   subtask: Subtask;
@@ -46,30 +47,34 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-3 p-3 bg-theme-sidebar rounded-lg border border-theme-border">
-        <input
-          type="text"
+      <div className="p-3 bg-theme-sidebar rounded-lg border border-theme-border">
+        <textarea
           value={titleValue}
+          rows={2}
           onChange={(e) => setTitleValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleSave();
             if (e.key === 'Escape') handleCancel();
           }}
-          className="flex-1 text-sm text-theme-text bg-theme-bg border border-theme-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-theme-accent"
+          className="w-full text-sm text-theme-text bg-theme-bg border border-theme-border rounded px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-theme-accent focus:border-theme-accent"
           autoFocus
         />
-        <button
-          onClick={handleSave}
-          className="px-3 py-1 text-xs bg-theme-accent text-white rounded hover:opacity-90"
-        >
-          Salvar
-        </button>
-        <button
-          onClick={handleCancel}
-          className="px-3 py-1 text-xs bg-theme-sidebar text-theme-text rounded hover:bg-theme-bg"
-        >
-          Cancelar
-        </button>
+        <div className="mt-2 flex items-center justify-end gap-1">
+          <button
+            onClick={handleCancel}
+            aria-label="Cancelar edição"
+            className="p-2 text-theme-muted hover:text-theme-text hover:bg-theme-bg rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleSave}
+            aria-label="Salvar subtarefa"
+            className="p-2 bg-theme-accent text-white rounded-lg hover:opacity-90 transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
+          >
+            <Check className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     );
   }

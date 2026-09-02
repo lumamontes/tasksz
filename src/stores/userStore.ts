@@ -7,9 +7,7 @@ import { atom } from 'nanostores';
 
 export interface UserProfile {
   name: string;
-  email?: string;
-  avatarUrl?: string;
-  provider?: 'google' | 'local';
+  provider: 'local';
 }
 
 export type AuthStatus = 'anonymous' | 'authenticated';
@@ -31,13 +29,11 @@ export const $user = atom<UserState>(defaultUserState);
 // Actions
 export function setUserName(name: string) {
   const current = $user.get();
-  const trimmedName = name.trim();
   $user.set({
     status: current.status,
     profile: {
-      name: trimmedName || 'Pessoa',
-      provider: 'local',
-      ...current.profile
+      name: name.trim() || 'Pessoa',
+      provider: 'local'
     }
   });
 }
@@ -46,17 +42,6 @@ export function setUserName(name: string) {
 export function hasCompletedOnboarding(): boolean {
   const user = $user.get();
   return user.profile !== null;
-}
-
-export function setUserProfile(profile: UserProfile) {
-  $user.set({
-    status: 'authenticated',
-    profile
-  });
-}
-
-export function clearUser() {
-  $user.set(defaultUserState);
 }
 
 // Get user name (with fallback)

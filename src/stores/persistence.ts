@@ -4,8 +4,8 @@
  */
 
 import type { Task, Subtask } from '../types';
-import { $tasks, $subtasks, $selectedTaskId, $taskFilter } from './tasksStore';
-import { $settings, type SettingsState } from './settingsStore';
+import { $tasks, $subtasks, $selectedTaskId, $taskFilter, type TaskFilter } from './tasksStore';
+import { $settings, defaultSettings, type SettingsState } from './settingsStore';
 import { $user, type UserState } from './userStore';
 
 const STORAGE_VERSION = 1;
@@ -16,7 +16,7 @@ interface StorageData {
   tasks: Task[];
   subtasks: Subtask[];
   selectedTaskId: string | null;
-  taskFilter: 'all' | 'today' | 'in-progress' | 'completed' | 'archived';
+  taskFilter: TaskFilter;
   settings: SettingsState;
   user: UserState;
   lastSaved: string;
@@ -87,46 +87,19 @@ export function loadFromLocalStorage(): boolean {
     $tasks.set(tasks);
     $subtasks.set(data.subtasks);
     $selectedTaskId.set(data.selectedTaskId);
-    if (data.taskFilter) {
+    if (
+      data.taskFilter &&
+      (data.taskFilter === 'all' ||
+        data.taskFilter === 'in-progress' ||
+        data.taskFilter === 'completed' ||
+        data.taskFilter === 'archived')
+    ) {
       $taskFilter.set(data.taskFilter);
     }
     
-    // Ensure settings have all required fields, especially customPalette and ndSettings
+    // Ensure settings have all required fields, falling back to defaults for new ones
     if (data.settings) {
-      // Ensure customPalette exists
-      if (!data.settings.customPalette || typeof data.settings.customPalette !== 'object') {
-        data.settings.customPalette = {
-          bg: '#f8f7f4',
-          panel: '#ffffff',
-          sidebar: '#fefefe',
-          text: '#2d3436',
-          mutedText: '#636e72',
-          accent: '#6c5ce7',
-          border: '#dfe6e9'
-        };
-      }
-      
-      // Ensure ndSettings exists (migration for existing users)
-      if (!data.settings.ndSettings || typeof data.settings.ndSettings !== 'object') {
-        data.settings.ndSettings = {
-          stimLevel: 'optimal',
-          focusMode: 'attention-support',
-          changeAnxiety: 'medium',
-          executiveLoad: 'standard',
-          animationIntensity: 'minimal',
-          colorContrast: 'medium',
-          texturePatterns: false,
-          focusRingStyle: 'subtle',
-          celebrationStyle: 'minimal',
-          streakTracking: true,
-          contextReminders: true,
-          routineTemplates: true,
-          randomizeOrder: false,
-          hyperfocusBreaks: true
-        };
-      }
-      
-      $settings.set(data.settings);
+      $settings.set({ ...defaultSettings, ...data.settings });
     }
     
     // Load user data

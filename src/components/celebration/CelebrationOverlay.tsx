@@ -1,7 +1,7 @@
 /**
  * CelebrationOverlay Component
- * Provides dopamine-driven feedback for task completion
- * Respects ND settings for animation intensity and sensory considerations
+ * Subtle completion feedback shown briefly when a task finishes.
+ * Honors the "reduce motion" setting and stays intentionally minimal.
  */
 
 import { useStore } from '@nanostores/react';
@@ -23,81 +23,52 @@ export function CelebrationOverlay({ show, level, message, onComplete }: Celebra
   useEffect(() => {
     if (!show) return;
 
-    const celebrationStyle = settings.ndSettings?.celebrationStyle || 'minimal';
-    if (celebrationStyle === 'none') {
-      onComplete();
-      return;
-    }
-
     setIsVisible(true);
 
-    // Trigger confetti based on level and user preferences
-    if (celebrationStyle === 'full') {
+    // Small, optional confetti burst (skipped when motion is reduced)
+    if (!settings.reduceMotion) {
       triggerConfetti(level);
     }
 
-    // Auto-hide after duration
-    const duration = celebrationStyle === 'minimal' ? 1500 : 3000;
+    // Auto-hide shortly after
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onComplete, 300); // Wait for fade out
-    }, duration);
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [show, level, settings.ndSettings?.celebrationStyle, onComplete]);
+  }, [show, level, settings.reduceMotion, onComplete]);
 
   const triggerConfetti = (level: 'small' | 'medium' | 'large') => {
-    const intensity = settings.ndSettings?.animationIntensity || 'minimal';
-    if (intensity === 'none') return;
-
     const baseConfig = {
       angle: 90,
       spread: 45,
       startVelocity: 30,
       decay: 0.9,
       gravity: 0.7,
-      colors: ['#6c5ce7', '#74b9ff', '#00d084', '#fdcb6e']
+      colors: ['#6c5ce7', '#74b9ff', '#00d084', '#fdcb6e'],
     };
 
-    let particleCount = 50;
-    let origin = { x: 0.5, y: 0.6 };
-
-    if (intensity === 'minimal') {
-      particleCount = Math.floor(particleCount * 0.3);
-    }
+    const particleCount = 30;
 
     switch (level) {
       case 'small':
         confetti({
           ...baseConfig,
           particleCount: Math.floor(particleCount * 0.5),
-          origin
+          origin: { x: 0.5, y: 0.6 },
         });
         break;
       case 'medium':
-        confetti({
-          ...baseConfig,
-          particleCount,
-          origin,
-          spread: 60
-        });
+        confetti({ ...baseConfig, particleCount, origin: { x: 0.5, y: 0.6 }, spread: 60 });
         break;
       case 'large':
-        // Burst from multiple points
-        confetti({
-          ...baseConfig,
-          particleCount,
-          origin: { x: 0.25, y: 0.6 }
-        });
-        confetti({
-          ...baseConfig,
-          particleCount,
-          origin: { x: 0.75, y: 0.6 }
-        });
+        confetti({ ...baseConfig, particleCount, origin: { x: 0.25, y: 0.6 } });
+        confetti({ ...baseConfig, particleCount, origin: { x: 0.75, y: 0.6 } });
         confetti({
           ...baseConfig,
           particleCount: Math.floor(particleCount * 0.7),
-          origin: { x: 0.5, y: 0.4 }
+          origin: { x: 0.5, y: 0.4 },
         });
         break;
     }
@@ -105,23 +76,23 @@ export function CelebrationOverlay({ show, level, message, onComplete }: Celebra
 
   if (!show || !isVisible) return null;
 
-  const celebrationStyle = settings.ndSettings.celebrationStyle;
-
   return (
-    <div 
+    <div
       className={`fixed inset-0 flex items-center justify-center z-50 pointer-events-none ${
         settings.reduceMotion ? '' : 'transition-opacity duration-300'
       } ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       role="alert"
       aria-live="polite"
     >
-      <div className={`bg-theme-accent text-white px-8 py-6 rounded-2xl shadow-xl max-w-sm mx-4 text-center ${
-        settings.reduceMotion ? '' : 'animate-pulse'
-      } ${celebrationStyle === 'minimal' ? 'scale-90' : 'scale-100'}`}>
-        <div className="text-4xl mb-3">
-          {level === 'large' && '🎉'}
-          {level === 'medium' && '✨'}
-          {level === 'small' && '💚'}
+      <div
+        className={`bg-theme-accent text-white px-8 py-6 rounded-2xl shadow-xl max-w-sm mx-4 text-center scale-90 ${
+          settings.reduceMotion ? '' : 'animate-pulse'
+        }`}
+      >
+        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
         </div>
         <p className="text-lg font-medium">{message}</p>
       </div>

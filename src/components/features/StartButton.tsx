@@ -22,7 +22,7 @@ export function StartButton({ taskId }: StartButtonProps) {
   const handleStart = () => {
     if (incompleteSubtasks.length === 0) {
       // No subtasks, just start working
-      setCurrentSection('pomodoro');
+      setCurrentSection('tasks');
     } else {
       // Show initiation ritual
       setShowInitiation(true);
@@ -34,8 +34,8 @@ export function StartButton({ taskId }: StartButtonProps) {
   };
 
   const handleBeginWork = () => {
-    // Switch to pomodoro timer
-    setCurrentSection('pomodoro');
+    // Switch back to the task list
+    setCurrentSection('tasks');
   };
 
   if (showInitiation) {

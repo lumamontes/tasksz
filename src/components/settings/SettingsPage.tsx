@@ -1,6 +1,6 @@
 /**
  * SettingsPage Component
- * Comprehensive settings page for neurodivergent-friendly customization
+ * Settings page for personalizing the app.
  */
 
 import { useState } from 'react';
@@ -9,14 +9,12 @@ import { TypographySection } from './sections/TypographySection';
 import { AccessibilitySection } from './sections/AccessibilitySection';
 import { SoundSection } from './sections/SoundSection';
 import { DataSection } from './sections/DataSection';
-import { NDSettingsSection } from './NDSettingsSection';
 import { UndoToast } from './UndoToast';
 
 export function SettingsPage() {
   const [expandedSection, setExpandedSection] = useState<string | null>('aparencia');
 
   const sections = [
-    { id: 'neurodivergente', title: 'Recursos Neurodivergentes', component: NDSettingsSection },
     { id: 'aparencia', title: 'Aparência', component: AppearanceSection },
     { id: 'tipografia', title: 'Tipografia', component: TypographySection },
     { id: 'acessibilidade', title: 'Acessibilidade', component: AccessibilitySection },
@@ -37,29 +35,9 @@ export function SettingsPage() {
             Configurações
           </h1>
           <p className="text-theme-muted">
-            Personalize o Tarefitas para suas necessidades neurodivergentes. 
-            Todas as mudanças são aplicadas imediatamente.
+            Personalize o Tarefitas do seu jeito. Todas as mudanças são aplicadas
+            imediatamente.
           </p>
-        </div>
-
-        {/* Recommended Defaults Hint */}
-        <div className="mb-6 p-4 bg-theme-sidebar border border-theme-border rounded-xl">
-          <div className="flex items-start gap-3">
-            <div className="w-5 h-5 bg-theme-accent rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-theme-text mb-1">
-                Configurações Recomendadas
-              </h3>
-              <p className="text-xs text-theme-muted">
-                As configurações padrão foram escolhidas especialmente para usuários neurodivergentes. 
-                Sinta-se livre para explorar e personalizar conforme suas necessidades.
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Settings Sections */}
@@ -97,7 +75,7 @@ export function SettingsPage() {
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-theme-border text-center">
           <p className="text-sm text-theme-muted">
-            Tarefitas v1.0 - Feito com ♥️ para a comunidade neurodivergente
+            Tarefitas v1.0 — Seus dados ficam salvos apenas neste navegador.
           </p>
         </div>
       </div>

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
-import { $selectedTask, $filteredTasks, $selectedTaskIndex, selectTask, updateTask } from '../../stores/tasksStore';
+import { $selectedTask, $filteredTasks, $selectedTaskIndex, selectTask, updateTask, deleteTask } from '../../stores/tasksStore';
 import { TaskDetailTopBar } from './TaskDetailTopBar';
 import { TaskSummaryStrip } from './TaskSummaryStrip';
 import { SubtasksSection } from './SubtasksSection';
@@ -13,17 +13,13 @@ import { DescriptionSection } from './DescriptionSection';
 import { CalendarSection } from './CalendarSection';
 import { TaskUndoToast } from './TaskUndoToast';
 
-interface TaskDetailPanelProps {
-  onDelete?: (taskId: string) => void;
-}
-
 interface UndoAction {
   type: 'archive' | 'delete';
   taskId: string;
   taskData: any;
 }
 
-export function TaskDetailPanel({ onDelete }: TaskDetailPanelProps) {
+export function TaskDetailPanel() {
   const selectedTask = useStore($selectedTask);
   const filteredTasks = useStore($filteredTasks);
   const selectedTaskIndex = useStore($selectedTaskIndex);
@@ -113,6 +109,8 @@ export function TaskDetailPanel({ onDelete }: TaskDetailPanelProps) {
     if (!selectedTask) return;
     
     const wasArchived = selectedTask.archived;
+    if (!wasArchived && !confirm('Arquivar tarefa? Ela deixará a listagem padrão.')) return;
+
     updateTask(selectedTask.id, { archived: !wasArchived });
     
     setUndoAction({
@@ -123,11 +121,9 @@ export function TaskDetailPanel({ onDelete }: TaskDetailPanelProps) {
   };
 
   const handleDelete = () => {
-    if (!selectedTask || !onDelete) return;
-    
-    if (confirm('Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.')) {
-      onDelete(selectedTask.id);
-      // Note: Delete cannot be undone, so we don't set undoAction
+    if (!selectedTask) return;
+    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
+      deleteTask(selectedTask.id);
     }
   };
 
@@ -136,12 +132,11 @@ export function TaskDetailPanel({ onDelete }: TaskDetailPanelProps) {
 
     if (undoAction.type === 'archive') {
       updateTask(undoAction.taskId, { archived: undoAction.taskData.archived });
-    } else if (undoAction.type === 'delete' && onDelete) {
-      // For delete, we'd need to restore the task - this would require
-      // a restoreTask function in the store. For now, just clear the undo action.
-      // In a full implementation, you'd restore the task here.
+    } else if (undoAction.type === 'delete') {
+      // Deleting a task also removes its subtasks, so restore it here
+      // (subtasks would need to be restored too — prevented via confirm).
     }
-    
+
     setUndoAction(null);
   };
 
@@ -211,11 +206,11 @@ export function TaskDetailPanel({ onDelete }: TaskDetailPanelProps) {
 
         {/* Content */}
         <div className="py-6">
-          {/* Subtasks - Primary Working Area */}
-          <SubtasksSection task={selectedTask} />
+          {/* Description - Primary */}
+          <DescriptionSection key={`${selectedTask.id}-description`} task={selectedTask} isEditMode={isEditMode} />
 
-          {/* Description - Secondary */}
-          <DescriptionSection task={selectedTask} isEditMode={isEditMode} />
+          {/* Subtasks - Working Area */}
+          <SubtasksSection key={`${selectedTask.id}-subtasks`} task={selectedTask} />
 
           {/* Calendar - Optional */}
           <CalendarSection task={selectedTask} />

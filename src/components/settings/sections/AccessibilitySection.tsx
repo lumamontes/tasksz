@@ -62,6 +62,31 @@ export function AccessibilitySection() {
         </label>
       </div>
 
+      {/* Celebrations */}
+      <div>
+        <h3 className="text-base font-medium text-theme-text mb-4">Feedback</h3>
+        <label className="flex items-center justify-between p-3 rounded-lg border border-theme-border hover:border-theme-accent/50 transition-colors cursor-pointer">
+          <div>
+            <div className="font-medium text-theme-text">Celebrações ao concluir</div>
+            <div className="text-sm text-theme-muted">
+              Mostra uma mensagem breve quando você conclui tarefas. Desativado por padrão.
+            </div>
+          </div>
+          <button
+            onClick={() => updateSettings({ celebrationsEnabled: !settings.celebrationsEnabled })}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent focus:ring-offset-2 ${
+              settings.celebrationsEnabled ? 'bg-theme-accent' : 'bg-theme-border'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-theme-sidebar transition-transform ${
+                settings.celebrationsEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </label>
+      </div>
+
       {/* Focus Indicators */}
       <div>
         <h3 className="text-base font-medium text-theme-text mb-4">Navegação</h3>

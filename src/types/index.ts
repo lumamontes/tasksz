@@ -92,7 +92,7 @@ export interface Task {
 }
 
 // New types for the app structure
-export type Section = 'tasks' | 'calendar' | 'pomodoro';
+export type Section = 'tasks' | 'configuracoes';
 
 export interface PomodoroSettings {
   focusMinutes: number;

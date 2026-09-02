@@ -1,319 +1,291 @@
 /**
- * Pomodoro Timer Store
- * Enhanced for the new Tarefitas app structure
+ * Pomodoro Store
+ * Shared, timestamp-based countdown used by every pomodoro UI (center panel,
+ * focus mode, popup window). All timing is derived from an end timestamp so the
+ * countdown never drifts and survives tab throttling / window reloads.
  */
 
 import { atom } from 'nanostores';
 import { $settings } from './settingsStore';
-import type { PomodoroSession } from '../types';
 
-// Timer state
-export const $minutes = atom(25);
-export const $seconds = atom(0);
-export const $mode = atom<'focus' | 'break' | 'longBreak'>('focus');
-export const $isActive = atom(false);
-export const $hasFinished = atom(false);
-export const $completedCycles = atom(0);
-export const $completedFocusSessions = atom(0);
-export const $currentTaskId = atom<string | null>(null);
-export const $sessions = atom<PomodoroSession[]>([]);
+export type PomodoroMode = 'focus' | 'break' | 'longBreak';
 
-// Get durations from settings
-function getDurations() {
-  const settings = $settings.get();
-  return {
-    focus: settings.pomodoro.focusMinutes,
-    break: settings.pomodoro.shortBreakMinutes,
-    longBreak: settings.pomodoro.longBreakMinutes,
-  };
-}
+const STORAGE_KEY = 'tarefitas_v1_pomodoroState';
+const MAX_STALE_MS = 60_000; // Ignore saved state older than one minute
 
-// DURATIONS constant - fallback if settings not available
-const DEFAULT_DURATIONS = {
+const FALLBACK_MINUTES: Record<PomodoroMode, number> = {
   focus: 25,
   break: 5,
   longBreak: 15,
 };
 
-// Timer interval reference
-let timerInterval: ReturnType<typeof setInterval> | null = null;
+// Public state
+export const $minutes = atom(25);
+export const $seconds = atom(0);
+export const $mode = atom<PomodoroMode>('focus');
+export const $isActive = atom(false);
+export const $hasFinished = atom(false);
+export const $completedFocusSessions = atom(0);
 
-// Initialize the store
-export function initializeStore() {
-  const mode = $mode.get();
-  const durations = getDurations();
-  const duration = durations[mode] || DEFAULT_DURATIONS[mode];
-  $minutes.set(duration);
-  $seconds.set(0);
-  $isActive.set(false);
-  $hasFinished.set(false);
+// Internal timing
+let timerInterval: number | null = null;
+let endsAt = 0;
+
+export function getDurationMinutes(mode: PomodoroMode): number {
+  const settings = $settings.get();
+  const pomodoro = settings.pomodoro;
+  switch (mode) {
+    case 'focus':
+      return pomodoro.focusMinutes;
+    case 'break':
+      return pomodoro.shortBreakMinutes;
+    case 'longBreak':
+      return pomodoro.longBreakMinutes;
+    default:
+      return FALLBACK_MINUTES[mode];
+  }
 }
 
-// Set mode and update timer
-export function setMode(mode: 'focus' | 'break' | 'longBreak') {
-  // Don't change mode if timer is active
-  if ($isActive.get()) return;
-  
-  $mode.set(mode);
-  const durations = getDurations();
-  const duration = durations[mode] || DEFAULT_DURATIONS[mode];
-  $minutes.set(duration);
-  $seconds.set(0);
-  $hasFinished.set(false);
+function remainingSeconds(): number {
+  return Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
 }
 
-// Start countdown
-export function startCountdown() {
-  // Clear any existing timer first to prevent duplicates
-  if (timerInterval) {
-    clearInterval(timerInterval);
+function applyRemaining() {
+  const total = remainingSeconds();
+  $minutes.set(Math.floor(total / 60));
+  $seconds.set(total % 60);
+}
+
+function stopInterval() {
+  if (timerInterval !== null) {
+    window.clearInterval(timerInterval);
     timerInterval = null;
   }
-  
+}
+
+/**
+ * What the next mode will be after the current one. Always derived from
+ * `$completedFocusSessions`, which is incremented when a focus session ends —
+ * so UI labels and the `nextMode()` action can never disagree.
+ */
+export function getNextMode(): PomodoroMode {
+  if ($mode.get() === 'focus') {
+    return $completedFocusSessions.get() % 4 === 0 ? 'longBreak' : 'break';
+  }
+  return 'focus';
+}
+
+export function setMode(mode: PomodoroMode) {
   if ($isActive.get()) return;
-  
-  $isActive.set(true);
+  stopInterval();
+  $mode.set(mode);
   $hasFinished.set(false);
-  
-  timerInterval = setInterval(() => {
-    const currentMinutes = $minutes.get();
-    const currentSeconds = $seconds.get();
-    
-    if (currentMinutes === 0 && currentSeconds === 0) {
-      // Timer finished
-      clearInterval(timerInterval!);
-      timerInterval = null;
-      $isActive.set(false);
-      $hasFinished.set(true);
-      
-      // If it was a focus session, increment completed sessions
-      if ($mode.get() === 'focus') {
-        $completedFocusSessions.set($completedFocusSessions.get() + 1);
-      }
-      
-      // Soft notification - only if sound is enabled and user wants notifications
-      // No forced sound - just a gentle text cue via notification if permission granted
-      const currentSettings = $settings.get();
-      if (currentSettings.soundEnabled && 'Notification' in window && Notification.permission === 'granted') {
-        const mode = $mode.get();
-        const title = mode === 'focus' ? 'Sessão de foco concluída' : 'Pausa finalizada';
-        new Notification(title, { 
-          body: mode === 'focus' ? 'Tempo para uma pausa' : 'Pronto para focar novamente?',
-          icon: '/favicon.ico',
-          silent: true // No sound, just visual notification
-        });
-      }
-      
+  $minutes.set(getDurationMinutes(mode));
+  $seconds.set(0);
+}
+
+export function startCountdown() {
+  if ($isActive.get()) return;
+  stopInterval();
+
+  const remaining = $minutes.get() * 60 + $seconds.get();
+  if (remaining <= 0) {
+    $minutes.set(getDurationMinutes($mode.get()));
+    $seconds.set(0);
+  }
+  endsAt = Date.now() + ($minutes.get() * 60 + $seconds.get()) * 1000;
+
+  $hasFinished.set(false);
+  $isActive.set(true);
+
+  timerInterval = window.setInterval(() => {
+    if (remainingSeconds() <= 0) {
+      finishMode();
       return;
     }
-    
-    if (currentSeconds > 0) {
-      $seconds.set(currentSeconds - 1);
-    } else {
-      $minutes.set(currentMinutes - 1);
-      $seconds.set(59);
-    }
-  }, 1000);
+    applyRemaining();
+  }, 500);
 }
 
-// Pause countdown
 export function pauseCountdown() {
   if (!$isActive.get()) return;
-  
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  
+  applyRemaining();
+  stopInterval();
   $isActive.set(false);
 }
 
-// Reset countdown
 export function resetCountdown() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  
+  stopInterval();
   $isActive.set(false);
   $hasFinished.set(false);
-  
-  // Reset to current mode's duration
-  const mode = $mode.get();
-  const durations = getDurations();
-  const duration = durations[mode] || DEFAULT_DURATIONS[mode];
-  $minutes.set(duration);
+  $minutes.set(getDurationMinutes($mode.get()));
   $seconds.set(0);
 }
 
-// Move to next mode
 export function nextMode() {
-  const currentMode = $mode.get();
-  const completedSessions = $completedFocusSessions.get();
-  
-  let nextModeValue: 'focus' | 'break' | 'longBreak';
-  
-  if (currentMode === 'focus') {
-    // After a focus session, determine break type
-    if (completedSessions % 4 === 0) {
-      nextModeValue = 'longBreak';
-    } else {
-      nextModeValue = 'break';
-    }
-  } else {
-    // After any break, go back to focus
-    nextModeValue = 'focus';
-  }
-  
-  setMode(nextModeValue);
-  $hasFinished.set(false);
+  setMode(getNextMode());
 }
 
-// Request notification permission if available
-if (typeof window !== 'undefined' && 'Notification' in window) {
-  if (Notification.permission === 'default') {
-    Notification.requestPermission();
+function finishMode() {
+  stopInterval();
+  $isActive.set(false);
+  $hasFinished.set(true);
+  $minutes.set(0);
+  $seconds.set(0);
+
+  if ($mode.get() === 'focus') {
+    $completedFocusSessions.set($completedFocusSessions.get() + 1);
   }
+
+  notifyFinished();
 }
 
-// Persist pomodoro state to localStorage for cross-window sync
-const POMODORO_STORAGE_KEY = 'tarefitas_v1_pomodoroState';
-let pomodoroStateLoaded = false; // Prevent multiple loads in same window
-let lastSaveTime = 0; // Throttle saves to prevent excessive writes
-
-export function savePomodoroState() {
+function notifyFinished() {
   if (typeof window === 'undefined') return;
-  
-  // Throttle saves to once per second to prevent lag
-  const now = Date.now();
-  if (now - lastSaveTime < 1000) return;
-  lastSaveTime = now;
-  
+  if (!$settings.get().soundEnabled) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const finishingFocus = $mode.get() === 'focus';
   try {
-    const state = {
-      minutes: $minutes.get(),
-      seconds: $seconds.get(),
-      mode: $mode.get(),
-      isActive: $isActive.get(),
-      hasFinished: $hasFinished.get(),
-      completedFocusSessions: $completedFocusSessions.get(),
-      timestamp: Date.now(),
-    };
-    localStorage.setItem(POMODORO_STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('Failed to save pomodoro state:', error);
+    const next = getNextMode();
+    new Notification(
+      finishingFocus ? 'Sessão de foco concluída' : 'Pausa finalizada',
+      {
+        body: finishingFocus
+          ? `Hora da ${next === 'longBreak' ? 'pausa longa' : 'pausa curta'}`
+          : 'Pronto para focar novamente?',
+        silent: true,
+      },
+    );
+  } catch {
+    // Notifications are optional — never let them break the timer.
+  }
+}
+
+// --- Persistence (cross-window sync + reload recovery) ----------------------
+
+function safeWrite(secondsRemaining: number) {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        secondsRemaining,
+        mode: $mode.get(),
+        isActive: $isActive.get(),
+        hasFinished: $hasFinished.get(),
+        completedFocusSessions: $completedFocusSessions.get(),
+        timestamp: Date.now(),
+      }),
+    );
+  } catch {
+    // Storage can be unavailable (private mode); persistence is best-effort.
   }
 }
 
 export function loadPomodoroState() {
   if (typeof window === 'undefined') return false;
-  
-  // Prevent multiple loads - only load once per session
-  if (pomodoroStateLoaded) return false;
-  
+
+  let state: {
+    secondsRemaining?: number;
+    mode?: PomodoroMode;
+    isActive?: boolean;
+    hasFinished?: boolean;
+    completedFocusSessions?: number;
+    timestamp?: number;
+  };
   try {
-    const stored = localStorage.getItem(POMODORO_STORAGE_KEY);
-    if (!stored) {
-      pomodoroStateLoaded = true; // Mark as loaded even if no state exists
-      return false;
-    }
-    
-    const state = JSON.parse(stored);
-    const age = Date.now() - (state.timestamp || 0);
-    
-    // Only load if state is recent (less than 1 minute old)
-    // This prevents loading stale state after page reload
-    if (age > 60000) {
-      pomodoroStateLoaded = true;
-      return false;
-    }
-    
-    $minutes.set(state.minutes);
-    $seconds.set(state.seconds);
-    $mode.set(state.mode);
-    $hasFinished.set(state.hasFinished);
-    $completedFocusSessions.set(state.completedFocusSessions || 0);
-    
-    // Only set isActive if timer is not already running
-    // This prevents conflicts when multiple windows are open
-    if (!timerInterval) {
-      $isActive.set(state.isActive);
-      
-      // If timer was active, restart it (but only if no timer is already running)
-      if (state.isActive && !state.hasFinished) {
-        startCountdown();
-      }
-    }
-    
-    pomodoroStateLoaded = true;
-    return true;
-  } catch (error) {
-    console.error('Failed to load pomodoro state:', error);
-    pomodoroStateLoaded = true;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    state = JSON.parse(raw);
+  } catch {
     return false;
   }
+
+  if (!state.secondsRemaining || Date.now() - (state.timestamp || 0) > MAX_STALE_MS) {
+    return false;
+  }
+
+  if (state.mode) $mode.set(state.mode);
+  $minutes.set(Math.floor(state.secondsRemaining / 60));
+  $seconds.set(state.secondsRemaining % 60);
+  $hasFinished.set(!!state.hasFinished);
+  $completedFocusSessions.set(state.completedFocusSessions || 0);
+
+  // Only resume a timer that was mid-run and still fresh.
+  if (state.isActive && !state.hasFinished && !timerInterval && !$isActive.get()) {
+    endsAt = Date.now() + state.secondsRemaining * 1000;
+    $isActive.set(true);
+    timerInterval = window.setInterval(() => {
+      if (remainingSeconds() <= 0) {
+        finishMode();
+        return;
+      }
+      applyRemaining();
+    }, 500);
+  }
+  return true;
 }
 
-// Auto-save pomodoro state on changes (throttled)
 if (typeof window !== 'undefined') {
-  // Use a single throttled save function to prevent excessive writes
-  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-  const throttledSave = () => {
-    if (saveTimeout) return;
-    saveTimeout = setTimeout(() => {
-      savePomodoroState();
-      saveTimeout = null;
-    }, 100); // Debounce saves to every 100ms
+  let saveTimer: number | null = null;
+  const scheduleSave = () => {
+    if (saveTimer !== null) return;
+    saveTimer = window.setTimeout(() => {
+      saveTimer = null;
+      safeWrite($minutes.get() * 60 + $seconds.get());
+    }, 200);
   };
-  
-  $minutes.subscribe(throttledSave);
-  $seconds.subscribe(throttledSave);
-  $mode.subscribe(throttledSave);
-  $isActive.subscribe(throttledSave);
-  $hasFinished.subscribe(throttledSave);
-  $completedFocusSessions.subscribe(throttledSave);
-  
-  // Listen for storage events (cross-window sync)
+
+  $minutes.subscribe(scheduleSave);
+  $seconds.subscribe(scheduleSave);
+  $mode.subscribe(scheduleSave);
+  $isActive.subscribe(scheduleSave);
+  $hasFinished.subscribe(scheduleSave);
+  $completedFocusSessions.subscribe(scheduleSave);
+
+  // Keep multiple open windows in sync.
   window.addEventListener('storage', (e) => {
-    if (e.key === POMODORO_STORAGE_KEY && e.newValue) {
-      try {
-        const state = JSON.parse(e.newValue);
-        const age = Date.now() - (state.timestamp || 0);
-        
-        // Only sync if state is recent
-        if (age < 60000) {
-          $minutes.set(state.minutes);
-          $seconds.set(state.seconds);
-          $mode.set(state.mode);
-          
-          // Don't sync isActive to avoid conflicts with running timers
-          // Only sync if timer was just started/stopped and no timer is currently running
-          if (state.isActive !== $isActive.get()) {
-            if (state.isActive && !timerInterval && !$isActive.get()) {
-              // Only start if we're not already active and no timer exists
-              startCountdown();
-            } else if (!state.isActive && timerInterval) {
-              // Pause if timer is running but state says it should be paused
-              pauseCountdown();
-            }
-          }
-          
-          $hasFinished.set(state.hasFinished);
-          $completedFocusSessions.set(state.completedFocusSessions || 0);
+    if (e.key !== STORAGE_KEY || !e.newValue) return;
+    let state: {
+      secondsRemaining?: number;
+      mode?: PomodoroMode;
+      isActive?: boolean;
+      hasFinished?: boolean;
+      completedFocusSessions?: number;
+      timestamp?: number;
+    };
+    try {
+      state = JSON.parse(e.newValue);
+    } catch {
+      return;
+    }
+    if (Date.now() - (state.timestamp || 0) > MAX_STALE_MS) return;
+
+    if (state.mode) $mode.set(state.mode);
+    if (state.secondsRemaining) {
+      $minutes.set(Math.floor(state.secondsRemaining / 60));
+      $seconds.set(state.secondsRemaining % 60);
+    }
+    $hasFinished.set(!!state.hasFinished);
+    $completedFocusSessions.set(state.completedFocusSessions || 0);
+
+    if (state.isActive && !$isActive.get() && !timerInterval) {
+      endsAt = Date.now() + state.secondsRemaining! * 1000;
+      $isActive.set(true);
+      timerInterval = window.setInterval(() => {
+        if (remainingSeconds() <= 0) {
+          finishMode();
+          return;
         }
-      } catch (error) {
-        console.error('Failed to sync pomodoro state:', error);
-      }
+        applyRemaining();
+      }, 500);
+    } else if (!state.isActive && $isActive.get()) {
+      pauseCountdown();
     }
   });
-}
 
-// Cleanup on page unload
-if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-    }
-    savePomodoroState();
+    stopInterval();
+    safeWrite($minutes.get() * 60 + $seconds.get());
   });
 }

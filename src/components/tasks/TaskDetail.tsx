@@ -6,10 +6,6 @@
 
 import { TaskDetailPanel } from './TaskDetailPanel';
 
-interface TaskDetailProps {
-  onDelete?: (taskId: string) => void;
-}
-
-export function TaskDetail({ onDelete }: TaskDetailProps) {
-  return <TaskDetailPanel onDelete={onDelete} />;
+export function TaskDetail() {
+  return <TaskDetailPanel />;
 }

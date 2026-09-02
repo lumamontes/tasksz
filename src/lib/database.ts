@@ -50,7 +50,6 @@ function createTables() {
       due_date DATETIME,
       estimated_duration INTEGER, -- in minutes
       category TEXT DEFAULT 'general',
-      tags TEXT, -- JSON array of tags
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       completed_at DATETIME,
