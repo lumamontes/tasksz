@@ -1,6 +1,8 @@
 # tarefitas
 
-Um site simples para organizar rotinas e tarefas, com foco em usuários neurodivergentes (TDAH, autismo). Local-first por padrão — tudo funciona 100% offline no navegador — com sincronização opcional entre dispositivos via Supabase.
+Um site simples para organizar rotinas e tarefas, local-first por padrão e com sincronização opcional entre dispositivos.
+
+[https://tarefitas.netlify.app/](https://tarefitas.netlify.app/)
 
 ## Screenshots
 
@@ -11,11 +13,11 @@ Um site simples para organizar rotinas e tarefas, com foco em usuários neurodiv
 
 ## Arquitetura
 
-**Local-first storage:** os dados vivem em [RxDB](https://rxdb.info/) sobre [IndexedDB](https://rxdb.info/rx-storage-indexeddb.html) (via [Dexie](https://rxdb.info/rx-storage-dexie.html)), o que dá dezenas a centenas de MB de espaço local — muito além dos ~5MB do `localStorage`.
+**Local-first storage:** os dados vivem em [RxDB](https://rxdb.info/) sobre [IndexedDB](https://rxdb.info/rx-storage-indexeddb.html) (via [Dexie](https://rxdb.info/rx-storage-dexie.html)), o que dá dezenas a centenas de MB de espaço local.
 
 - `src/lib/rxdb/database.ts` — factory do banco RxDB + coleções (`tasks`, `subtasks`, `settings`, `profile`).
 - `src/lib/rxdb/bridge.ts` — ponte entre RxDB e os atoms de Nanostores; é o único lugar que mapeia domínio ↔ documento.
-- `src/stores/*` — continuam sendo a fachada reativa para os componentes (nenhum componente foi alterado); as mutações gravam via ponte no RxDB.
+- `src/stores/*` — fachada reativa para os componentes.
 - `src/lib/rxdb/replication.ts` — inicia/para a replicação com o Supabase conforme o login/logout.
 
 **Sync com Supabase (opcional):** quando `PUBLIC_SUPABASE_URL` e `PUBLIC_SUPABASE_ANON_KEY` estão configuradas e o usuário faz login, o plugin oficial [`replicateSupabase`](https://rxdb.info/replication-supabase.html) faz a mágica:
