@@ -2,6 +2,13 @@
 
 Um site simples para organizar rotinas e tarefas, com foco em usuários neurodivergentes (TDAH, autismo). Local-first por padrão — tudo funciona 100% offline no navegador — com sincronização opcional entre dispositivos via Supabase.
 
+## Screenshots
+
+| | |
+|:--:|:--:|
+| <img src="public/screenshots/landing.png" alt="Landing page" width="420"/> | <img src="public/screenshots/tasks-view.png" alt="Lista de tarefas com painel de detalhes" width="420"/> |
+| <img src="public/screenshots/sync-view.png" alt="Conta e sincronização" width="420"/> | <img src="public/screenshots/settings-view.png" alt="Configurações" width="420"/> |
+
 ## Arquitetura
 
 **Local-first storage:** os dados vivem em [RxDB](https://rxdb.info/) sobre [IndexedDB](https://rxdb.info/rx-storage-indexeddb.html) (via [Dexie](https://rxdb.info/rx-storage-dexie.html)), o que dá dezenas a centenas de MB de espaço local — muito além dos ~5MB do `localStorage`.
