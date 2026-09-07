@@ -11,11 +11,11 @@ import 'react-day-picker/style.css';
 import { ptBR } from 'react-day-picker/locale/pt-BR';
 import { $selectedDay, setSelectedDay } from '../../stores/tasksStore';
 import { getTaskCountForDate } from '../../stores/tasksStore';
-import { formatDateLocal, parseDateLocal, getTodayString } from '../../utils/dateUtils';
+import { formatDateLocal, isValidDateString, parseDateLocal, getTodayString } from '../../utils/dateUtils';
 
 export function TaskDayPicker() {
   const selectedDay = useStore($selectedDay);
-  const selected = parseDateLocal(selectedDay);
+  const selected = isValidDateString(selectedDay) ? parseDateLocal(selectedDay) : new Date();
   const [month, setMonth] = useState<Date>(selected);
 
   const hasTasks = (date: Date) => getTaskCountForDate(formatDateLocal(date)) > 0;

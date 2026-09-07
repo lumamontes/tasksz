@@ -1,0 +1,129 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { APP_NAME } from '../utils/constants';
+
+const title = `Política de Privacidade - ${APP_NAME}`;
+const description = 'Como o Tarefitas coleta, armazena e protege seus dados.';
+---
+
+<Layout title={title} description={description}>
+  <main class="min-h-screen bg-theme-bg text-theme-text">
+    <div class="max-w-3xl mx-auto px-6 py-12">
+      <a href="/" class="text-sm text-theme-accent hover:text-theme-accent/80 transition duration-200">
+        ← Voltar para o início
+      </a>
+
+      <header class="mt-6 mb-10">
+        <h1 class="text-3xl font-semibold mb-2">Política de Privacidade</h1>
+        <p class="text-sm text-theme-muted">Última atualização: setembro de 2026</p>
+      </header>
+
+      <div class="space-y-8 leading-relaxed text-theme-muted">
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">1. Introdução</h2>
+          <p>
+            O <strong class="text-theme-text">Tarefitas</strong> é um aplicativo de código aberto para
+            organizar rotinas e tarefas, desenhado com foco em usuários neurodivergentes. Esta página
+            explica, em linguagem direta, o que acontece com os seus dados ao usar o aplicativo.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">2. Local-first: seus dados são seus</h2>
+          <p>
+            O Tarefitas segue uma arquitetura <em>local-first</em>. Suas tarefas, subtarefas e
+            configurações ficam armazenadas <strong class="text-theme-text">exclusivamente no seu dispositivo</strong>,
+            em um banco de dados local do navegador (IndexedDB). Você pode usar o aplicativo inteiro
+            sem criar conta, sem conexão e sem enviar nada para servidores.
+          </p>
+          <p class="mt-3">
+            Você pode exportar seus dados a qualquer momento (Configurações → Dados → Baixar Backup)
+            e apagar tudo localmente.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">3. Sincronização opcional via Supabase</h2>
+          <p>
+            Se você criar uma conta e ativar a sincronização, os dados das suas tarefas são enviados
+            para o <strong class="text-theme-text">Supabase</strong>, um provedor de banco de dados na nuvem
+            com hospedagem no Brasil e na União Europeia. A sincronização é usada apenas para que você
+            acesse os mesmos dados em outros dispositivos.
+          </p>
+          <p class="mt-3">
+            Nenhuma sincronização acontece sem a sua escolha explícita de criar uma conta. Sem login,
+            o aplicativo continua 100% local.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">4. O que coletamos</h2>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong class="text-theme-text">Dados da conta:</strong> e-mail e senha (criptografada) para login, caso você crie uma conta.</li>
+            <li><strong class="text-theme-text">Seu conteúdo:</strong> tarefas, subtarefas, rotina, configurações e preferências que você mesmo digita.</li>
+            <li><strong class="text-theme-text">Dados técnicos básicos dos servidores</strong> (logs de rede utilizados pelo Supabase, comuns a qualquer serviço de hospedagem).</li>
+          </ul>
+          <p class="mt-3">
+            <strong class="text-theme-text">Não coletamos</strong> publicidade, informações de
+            saúde, ou dados pessoais para revenda. Sem login, o aplicativo é 100% local; as únicas
+            exceções são a sincronização (se você criar uma conta) e as estatísticas anônimas
+            (se o administrador ativar — veja a seção 5).
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">5. Estatísticas anônimas (opcional)</h2>
+          <p>
+            O Tarefitas pode usar <strong class="text-theme-text">PostHog</strong> e
+            <strong class="text-theme-text">Google Analytics 4</strong> para entender, de forma
+            agregada e anônima, como o aplicativo é usado (ex.: quantas tarefas são criadas, se o
+            pomodoro é usado). Essas ferramentas <strong class="text-theme-text">só são ativadas
+            quando o administrador configura as chaves</strong> no ambiente de publicação — por
+            padrão, elas estão desligadas e nenhuma estatística é enviada.
+          </p>
+          <p class="mt-3">
+            Elas ajudam a priorizar funcionalidades e detectar problemas de uso, mas coletam apenas
+            eventos de interação anônimos (não enviam o texto das suas tarefas nem dados de login).
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">6. Como usamos seus dados</h2>
+          <p>Apenas para fazer o aplicativo funcionar: exibir suas tarefas, sincronizar entre dispositivos (se ativado), restaurar suas configurações e, opcionalmente, gerar estatísticas anônimas de uso. Nunca vendemos, alugamos ou compartilhamos seus dados com terceiros para fins comerciais.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">7. LGPD e seus direitos</h2>
+          <p>
+            Este aplicativo é destinado a usuários no Brasil e respeita a Lei Geral de Proteção de
+            Dados (LGPD). A qualquer momento você pode:
+          </p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong class="text-theme-text">Acessar</strong> seus dados (exportar backup).</li>
+            <li><strong class="text-theme-text">Corrigir</strong> seus dados (editar tarefas/contas).</li>
+            <li><strong class="text-theme-text">Apagar</strong> seus dados (Configurações → Dados → Apagar tudo, ou excluindo a conta).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">8. Código aberto</h2>
+          <p>
+            O <strong class="text-theme-text">Tarefitas</strong> é um projeto de código aberto sob a
+            licença MIT. Todo o código-fonte é público no GitHub, o que significa que qualquer pessoa
+            pode auditar exatamente o que o aplicativo faz (e não faz) com os seus dados.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-medium text-theme-text mb-3">9. Contato</h2>
+          <p>
+            Dúvidas sobre esta política ou sobre seus dados? Fale conosco pelo e-mail
+            <a href="mailto:lumagoesmontes@gmail.com" class="text-theme-accent hover:text-theme-accent/80 transition duration-200">
+              {" "}lumagoesmontes@gmail.com
+            </a>.
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+</Layout>

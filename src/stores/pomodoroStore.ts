@@ -7,6 +7,7 @@
 
 import { atom } from 'nanostores';
 import { $settings } from './settingsStore';
+import { trackEvent } from '../utils/analytics';
 
 export type PomodoroMode = 'focus' | 'break' | 'longBreak';
 
@@ -98,6 +99,8 @@ export function startCountdown() {
   $hasFinished.set(false);
   $isActive.set(true);
 
+  trackEvent('pomodoro_started', { mode: $mode.get() });
+
   timerInterval = window.setInterval(() => {
     if (remainingSeconds() <= 0) {
       finishMode();
@@ -137,12 +140,49 @@ function finishMode() {
     $completedFocusSessions.set($completedFocusSessions.get() + 1);
   }
 
+  trackEvent('pomodoro_finished', { mode: $mode.get() });
+
   notifyFinished();
+}
+
+/**
+ * Short, soft chime played when a session ends and sounds are enabled.
+ * Pure Web Audio — no audio assets required.
+ */
+function playFinishChime() {
+  if (typeof window === 'undefined' || !window.AudioContext) return;
+
+  try {
+    const audioContext = new AudioContext();
+    const now = audioContext.currentTime;
+
+    // Gentle three-note arpeggio (C5-E5-G5), soft by design.
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + i * 0.18);
+      gain.gain.linearRampToValueAtTime(0.2, now + i * 0.18 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.7);
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start(now + i * 0.18);
+      osc.stop(now + i * 0.18 + 0.75);
+    });
+
+    window.setTimeout(() => audioContext.close(), 2000);
+  } catch {
+    // Audio is optional — never let it break the timer.
+  }
 }
 
 function notifyFinished() {
   if (typeof window === 'undefined') return;
   if (!$settings.get().soundEnabled) return;
+
+  playFinishChime();
+
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   const finishingFocus = $mode.get() === 'focus';

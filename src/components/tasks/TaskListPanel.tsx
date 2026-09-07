@@ -31,9 +31,10 @@ import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { PomodoroTimer } from '../PomodoroTimer';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { htmlToPlainText } from '../../utils/text';
 import { tasksToMarkdown } from '../../utils/taskFormat';
-import { addDays, formatDateLocal, formatDayLabelFull, getTodayString, parseDateLocal } from '../../utils/dateUtils';
+import { addDays, formatDateLocal, formatDayLabelFull, getTodayString, isValidDateString, parseDateLocal } from '../../utils/dateUtils';
 import {
   Plus,
   ChevronLeft,
@@ -152,7 +153,8 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
     : filteredTasks;
 
   const moveDay = (offset: number) => {
-    setSelectedDay(formatDateLocal(addDays(parseDateLocal(selectedDay), offset)));
+    const base = isValidDateString(selectedDay) ? parseDateLocal(selectedDay) : new Date();
+    setSelectedDay(formatDateLocal(addDays(base, offset)));
   };
 
   // Keyboard navigation - Arrow Down / J
@@ -366,7 +368,7 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
           <div className="text-center py-10">
             <p className="text-theme-muted">Nenhuma tarefa para este dia.</p>
             <p className="text-xs text-theme-muted mt-1">
-              Tarefas sem data não vencem — elas aparecem aqui até serem concluídas.
+              Sem pressa: tarefas sem data ficam guardadas até você terminar.
             </p>
           </div>
         ) : (
@@ -446,9 +448,6 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                       >
                         {task.title}
                       </span>
-                      {task.scheduledDate && (
-                        <span className="text-xs text-theme-muted shrink-0">{task.scheduledDate}</span>
-                      )}
                     </div>
                   </button>
                 </div>
@@ -541,7 +540,7 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
           </p>
           {searchQuery.trim() === '' && (
             <p className="text-xs text-theme-muted mt-1">
-              Tarefas sem data não vencem — elas aparecem aqui até serem concluídas.
+              Sem pressa: tarefas sem data ficam guardadas até você terminar.
             </p>
           )}
         </div>
@@ -687,18 +686,19 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
   );
 
   return (
-    <div
-      style={desktopResizable ? { width: `${leftPanelWidth}px` } : undefined}
-      className={`relative h-full flex flex-col bg-theme-sidebar border-r border-theme-border ${
-        desktopResizable ? 'shrink-0' : 'flex-1'
-      }`}
-    >
+    <ErrorBoundary>
+      <div
+        style={desktopResizable ? { width: `${leftPanelWidth}px` } : undefined}
+        className={`relative h-full flex flex-col bg-theme-sidebar border-r border-theme-border ${
+          desktopResizable ? 'shrink-0' : 'flex-1'
+        }`}
+      >
       {/* Header */}
       <div className="px-4 pt-4 pb-2 border-b border-theme-border shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-theme-text">Tarefas</h2>
           <div className="flex items-center gap-2">
-            <Button onClick={openNewTask} size="small" aria-label="Nova tarefa">
+            <Button onClick={() => openNewTask()} size="small" aria-label="Nova tarefa">
               <Plus />
             </Button>
           </div>
@@ -856,6 +856,7 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
           {notice}
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

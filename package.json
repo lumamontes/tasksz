@@ -1,7 +1,27 @@
 {
   "name": "tarefitas",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": "lumamontes",
+  "description": "Um site simples para organizar rotina e tarefas, local-first e amigável para pessoas neurodivergentes.",
+  "homepage": "https://github.com/lumamontes/tasksz#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lumamontes/tasksz.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lumamontes/tasksz/issues"
+  },
+  "keywords": [
+    "tarefas",
+    "rotina",
+    "organização",
+    "tdah",
+    "neurodiversidade",
+    "pomodoro",
+    "local-first"
+  ],
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -9,34 +29,31 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.6.12",
-    "@astrojs/node": "^9.5.2",
     "@astrojs/react": "^4.4.2",
     "@nanostores/react": "^1.0.0",
+    "@supabase/supabase-js": "^2.112.4",
     "@tailwindcss/vite": "^4.1.18",
     "@tiptap/extension-placeholder": "^3.17.1",
     "@tiptap/react": "^3.17.1",
     "@tiptap/starter-kit": "^3.17.1",
-    "@types/pg": "^8.16.0",
     "astro": "^5.16.15",
-    "better-auth": "^1.4.17",
-    "better-sqlite3": "^12.6.2",
     "canvas-confetti": "^1.9.4",
+    "dexie": "^4.4.5",
     "lucide-react": "^0.563.0",
     "nanostores": "^1.1.0",
-    "pg": "^8.17.2",
+    "posthog-js": "^1.427.2",
     "react": "^19.2.3",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.3",
-    "sqlite3": "^5.1.7",
-    "tailwindcss": "^4.1.18",
-    "wrangler": "^4.60.0",
-    "zod": "^4.0.0"
+    "rxdb": "^17.5.0",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
+    "@astrojs/check": "^0.9.10",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.2.9",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a"
 }

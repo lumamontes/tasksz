@@ -8,12 +8,14 @@ import { setupPersistence } from '../stores/persistence';
 import { initializeSettings } from '../stores/settingsStore';
 import { initializeMiniTimer } from '../stores/miniTimerStore';
 import { loadPomodoroState } from '../stores/pomodoroStore';
+import { initAuth } from '../stores/authStore';
 
 interface StoreInitOptions {
   persistence?: boolean;
   settings?: boolean;
   miniTimer?: boolean;
   pomodoro?: boolean;
+  auth?: boolean;
 }
 
 const defaultOptions: Required<StoreInitOptions> = {
@@ -21,6 +23,7 @@ const defaultOptions: Required<StoreInitOptions> = {
   settings: true,
   miniTimer: false,
   pomodoro: false,
+  auth: false,
 };
 
 /**
@@ -36,20 +39,28 @@ export function useStoreInit(options: StoreInitOptions = {}) {
     if (initialized.current) return;
     initialized.current = true;
 
-    if (opts.persistence) {
-      setupPersistence();
-    }
+    const run = async () => {
+      if (opts.persistence) {
+        await setupPersistence();
+      }
 
-    if (opts.settings) {
-      initializeSettings();
-    }
+      if (opts.settings) {
+        initializeSettings();
+      }
 
-    if (opts.miniTimer) {
-      initializeMiniTimer();
-    }
+      if (opts.miniTimer) {
+        initializeMiniTimer();
+      }
 
-    if (opts.pomodoro) {
-      loadPomodoroState();
-    }
+      if (opts.pomodoro) {
+        loadPomodoroState();
+      }
+
+      if (opts.auth) {
+        await initAuth();
+      }
+    };
+
+    void run();
   }, []); // Empty deps - only run once on mount
 }

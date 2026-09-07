@@ -10,6 +10,7 @@ import { useStore } from '@nanostores/react';
 import { $taskForm } from '../../stores/uiStore';
 import { $selectedTaskId } from '../../stores/tasksStore';
 import { TaskDetailEmpty } from './TaskDetailEmpty';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 
 const TaskFormLazy = lazy(() => import('./TaskForm').then((m) => ({ default: m.TaskForm })));
 const TaskDetailLazy = lazy(() => import('./TaskDetail').then((m) => ({ default: m.TaskDetail })));
@@ -33,15 +34,17 @@ export function TasksDetailPane() {
 
   return (
     <div className="h-full min-w-0 bg-theme-panel">
-      <Suspense
-        fallback={
-          <div className="h-full flex items-center justify-center text-sm text-theme-muted">
-            Carregando…
-          </div>
-        }
-      >
-        {content}
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="h-full flex items-center justify-center text-sm text-theme-muted">
+              Carregando…
+            </div>
+          }
+        >
+          {content}
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }

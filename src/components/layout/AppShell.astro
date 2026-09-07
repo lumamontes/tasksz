@@ -8,8 +8,9 @@
 import Sidebar from './Sidebar.astro';
 import TasksArea from './TasksArea.astro';
 import { SettingsPage } from '../settings/SettingsPage';
-import { FocusModeView } from '../focus/FocusModeView';
 import { CelebrationHost } from '../celebration/CelebrationHost';
+import { FloatingPomodoro } from '../pomodoro/FloatingPomodoro';
+import { AuthModal } from '../auth/AuthModal';
 ---
 
 <div id="app-shell" class="flex h-screen bg-theme-bg font-sans text-theme-text overflow-hidden">
@@ -32,7 +33,7 @@ import { CelebrationHost } from '../celebration/CelebrationHost';
   <!-- Left Sidebar -->
   <aside 
     id="sidebar-navigation"
-    class="w-80 bg-theme-sidebar border-r border-theme-border shrink-0"
+    class="bg-theme-sidebar border-r border-theme-border shrink-0"
     role="navigation"
     aria-label="Navegação principal"
   >
@@ -54,19 +55,22 @@ import { CelebrationHost } from '../celebration/CelebrationHost';
 
   <!-- Task completion celebrations (hydrates on idle) -->
   <CelebrationHost client:idle />
-</div>
 
-<!-- Focus Mode Overlay (conditionally rendered via React based on settings) -->
-<div id="focus-mode-container" style="display: none;">
-  <FocusModeView client:load />
+  <!-- Detached pomodoro timer (floating, always accessible) -->
+  <FloatingPomodoro client:load />
+
+  <!-- Sign-in / sign-up modal (opened from the sidebar CTA) -->
+  <AuthModal client:load />
 </div>
 
 <script>
   import { initStores } from '../../utils/initStores';
-  import { $currentSection, $settings, updateSettings, applyTheme, applyFont } from '../../stores/settingsStore';
+  import { $currentSection, $settings, applyTheme, applyFont } from '../../stores/settingsStore';
+  import { $sidebarCollapsed, loadSidebarCollapsed } from '../../stores/layoutStore';
   
   // Initialize stores on page load
   initStores();
+  loadSidebarCollapsed();
   
   // Apply initial theme and font
   const settings = $settings.get();
@@ -81,19 +85,15 @@ import { CelebrationHost } from '../celebration/CelebrationHost';
     document.body.className = `density-${settings.density}`;
   };
   
-  // Show/hide focus mode and main app shell
-  const updateFocusMode = () => {
-    const settings = $settings.get();
-    const focusModeContainer = document.getElementById('focus-mode-container');
-    
-    if (settings.focusModeEnabled) {
-      if (appShell) appShell.style.display = 'none';
-      if (focusModeContainer) focusModeContainer.style.display = 'block';
-    } else {
-      if (appShell) appShell.style.display = 'flex';
-      if (focusModeContainer) focusModeContainer.style.display = 'none';
-    }
+  // Toggle sidebar collapsed state.
+  // React islands toggle $sidebarCollapsed; this script keeps the <aside>
+  // class (and thus the CSS width/rail) in sync with the store value.
+  const sidebarNav = document.getElementById('sidebar-navigation');
+  const updateSidebarCollapsed = () => {
+    if (!sidebarNav) return;
+    sidebarNav.classList.toggle('sidebar-collapsed', $sidebarCollapsed.get());
   };
+  $sidebarCollapsed.subscribe(updateSidebarCollapsed);
   
   // Show/hide sections based on current section
   const updateMainContent = () => {
@@ -123,33 +123,17 @@ import { CelebrationHost } from '../celebration/CelebrationHost';
       setTimeout(checkAndUpdate, 100);
     }
   };
-  
-  // Keyboard shortcut for Focus Mode (F key when not typing)
-  const handleKeyDown = (e: KeyboardEvent) => {
-    const target = e.target as HTMLElement;
-    const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-    
-    if ((e.key === 'f' || e.key === 'F') && !isTyping && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-      const settings = $settings.get();
-      updateSettings({ focusModeEnabled: !settings.focusModeEnabled });
-    }
-  };
-  
+
   // Subscribe to store changes
   $settings.subscribe(updateDensity);
-  $settings.subscribe(updateFocusMode);
   $currentSection.subscribe(updateMainContent);
   
   // Initial updates
   updateDensity();
-  updateFocusMode();
+  updateSidebarCollapsed();
   
   // Initial section update after a short delay to allow React hydration
   setTimeout(checkAndUpdate, 200);
-  
-  // Add keyboard listener
-  window.addEventListener('keydown', handleKeyDown);
 </script>
 
 <style>
@@ -157,7 +141,7 @@ import { CelebrationHost } from '../celebration/CelebrationHost';
   #app-shell {
     position: relative;
   }
-  
+
   /* Hide sections by default, React components will handle visibility */
   [data-section] {
     height: 100%;

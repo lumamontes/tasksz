@@ -394,3 +394,69 @@ select:focus {
 .daypicker-root .rdp-selected .rdp-day_button::after {
   background: #fff;
 }
+
+/* Fluid calendar: cells scale to fit the resizable panel width */
+.daypicker-root {
+  width: 100%;
+}
+.daypicker-root .rdp-months {
+  max-width: none;
+  width: 100%;
+  justify-content: center;
+}
+.daypicker-root .rdp-month {
+  width: 100%;
+  flex: 1 0 100%;
+}
+.daypicker-root .rdp-month_grid {
+  width: 100%;
+  table-layout: fixed;
+}
+.daypicker-root .rdp-day {
+  width: auto;
+  height: var(--rdp-day-height);
+}
+.daypicker-root .rdp-day_button {
+  width: 100%;
+  max-width: var(--rdp-day_button-width);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+}
+
+/* Sidebar collapsed state: hide text labels + shrink to an icon rail.
+   All visual collapse is driven by this class on the <aside>, so React
+   (label hiding) and the shell script (width) stay in sync via the store. */
+#sidebar-navigation {
+  width: 20rem;
+  transition: width 0.2s ease;
+}
+#sidebar-navigation.sidebar-collapsed {
+  width: 4.5rem;
+}
+#sidebar-navigation.sidebar-collapsed .sidebar-label {
+  display: none;
+}
+.sidebar-collapsed-only {
+  display: none;
+}
+#sidebar-navigation.sidebar-collapsed .sidebar-collapsed-only {
+  display: inline-flex;
+}
+#sidebar-navigation.sidebar-collapsed .sidebar-header {
+  padding: 1rem 0.5rem;
+  justify-content: center;
+}
+#sidebar-navigation.sidebar-collapsed .sidebar-nav {
+  padding: 1rem 0.5rem;
+}
+/* Hide nav labels + center icons in the rail. Kept separate from the React
+   conditional render so the rail is correct even if they ever desync. */
+#sidebar-navigation.sidebar-collapsed .sidebar-nav-label {
+  display: none;
+}
+#sidebar-navigation.sidebar-collapsed .sidebar-nav-button {
+  justify-content: center;
+  padding: 0.5rem;
+  gap: 0;
+}

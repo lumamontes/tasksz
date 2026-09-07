@@ -1,10 +1,15 @@
 /**
  * Settings Store
  * Theme, typography, accessibility, sound and pomodoro customization
+ *
+ * Settings are persisted to RxDB (IndexedDB) via the bridge and replicated to
+ * Supabase. Mutations update the atom immediately so theme/font apply without
+ * a round-trip, and the RxDB watcher writes the canonical copy.
  */
 
 import { atom } from 'nanostores';
 import type { Section } from '../types';
+import { rxSaveSettings } from '../lib/rxdb/bridge';
 
 export type ThemeId = "calm-beige" | "high-contrast" | "low-stimulation" | "custom";
 export type FontId = "system" | "inter" | "atkinson" | "lexend" | "opendyslexic";
@@ -28,10 +33,6 @@ export interface SettingsState {
   showProgressBars: boolean;
   reduceMotion: boolean;
   soundEnabled: boolean;
-  pomodoroSound: "none" | "white-noise" | "pink-noise" | "brown-noise" | "rain" | "cafe";
-  soundVolume: number;
-  tickSoundEnabled: boolean;
-  focusModeEnabled: boolean; // Focus mode toggle
   celebrationsEnabled: boolean; // Completion celebrations toggle
   pomodoro: {
     focusMinutes: number;
@@ -92,10 +93,6 @@ export const defaultSettings: SettingsState = {
     ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
     : true,
   soundEnabled: false,
-  pomodoroSound: 'none',
-  soundVolume: 0.6,
-  tickSoundEnabled: false,
-  focusModeEnabled: false,
   celebrationsEnabled: false,
   pomodoro: {
     focusMinutes: 25,
@@ -167,6 +164,7 @@ export function updateSettings(updates: Partial<SettingsState>) {
   $previousSettings.set(current); // Store for undo
   const updated = { ...current, ...updates };
   $settings.set(updated);
+  void rxSaveSettings(updated);
   
   // Apply changes immediately
   applyTheme(updated);
@@ -181,6 +179,7 @@ export function updatePomodoroSettings(updates: Partial<SettingsState['pomodoro'
     pomodoro: { ...current.pomodoro, ...updates }
   };
   $settings.set(updated);
+  void rxSaveSettings(updated);
 }
 
 export function updateCustomPalette(updates: Partial<CustomPalette>) {
@@ -192,6 +191,7 @@ export function updateCustomPalette(updates: Partial<CustomPalette>) {
     customPalette: { ...current.customPalette, ...updates }
   };
   $settings.set(updated);
+  void rxSaveSettings(updated);
   applyTheme(updated);
 }
 
@@ -202,6 +202,7 @@ export function setCurrentSection(section: Section | 'configuracoes') {
 export function resetSettings() {
   $previousSettings.set($settings.get());
   $settings.set(defaultSettings);
+  void rxSaveSettings(defaultSettings);
   applyTheme(defaultSettings);
   applyFont(defaultSettings);
 }
@@ -211,6 +212,7 @@ export function undoSettings() {
   if (previous) {
     $settings.set(previous);
     $previousSettings.set(null);
+    void rxSaveSettings(previous);
     applyTheme(previous);
     applyFont(previous);
   }
@@ -228,6 +230,7 @@ export function resetAppearance() {
     showProgressBars: defaultSettings.showProgressBars
   };
   $settings.set(updated);
+  void rxSaveSettings(updated);
   applyTheme(updated);
 }
 
@@ -236,12 +239,10 @@ export function resetSounds() {
   const current = $settings.get();
   const updated = {
     ...current,
-    soundEnabled: defaultSettings.soundEnabled,
-    pomodoroSound: defaultSettings.pomodoroSound,
-    soundVolume: defaultSettings.soundVolume,
-    tickSoundEnabled: defaultSettings.tickSoundEnabled
+    soundEnabled: defaultSettings.soundEnabled
   };
   $settings.set(updated);
+  void rxSaveSettings(updated);
 }
 
 export function resetPomodoro() {
@@ -252,6 +253,7 @@ export function resetPomodoro() {
     pomodoro: defaultSettings.pomodoro
   };
   $settings.set(updated);
+  void rxSaveSettings(updated);
 }
 
 // Global "Pausar tudo" action - stops pomodoro, sounds, animations
@@ -270,6 +272,7 @@ export async function pauseEverything() {
     reduceMotion: true // Freeze animations
   };
   $settings.set(updated);
+  void rxSaveSettings(updated);
 }
 
 // Initialize theme and font on load

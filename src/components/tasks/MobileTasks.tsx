@@ -4,11 +4,12 @@
  * list → detail (with back button) → form, driven by shared stores.
  */
 
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { useStore } from '@nanostores/react';
 import { $taskForm } from '../../stores/uiStore';
 import { $tasks, $selectedTaskId, selectTask } from '../../stores/tasksStore';
 import { TaskListPanel } from './TaskListPanel';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 
 const TaskFormLazy = lazy(() => import('./TaskForm').then((m) => ({ default: m.TaskForm })));
 const TaskDetailLazy = lazy(() => import('./TaskDetail').then((m) => ({ default: m.TaskDetail })));
@@ -23,18 +24,17 @@ export function MobileTasks() {
   const selectedTaskId = useStore($selectedTaskId);
   const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) : null;
 
+  let content: ReactNode;
   if (form) {
-    return (
+    content = (
       <div className="h-full overflow-y-auto bg-theme-panel">
         <div className="p-6">
           <TaskFormLazy key={formKey(form.mode, form.mode === 'edit' ? form.taskId : undefined)} />
         </div>
       </div>
     );
-  }
-
-  if (selectedTask) {
-    return (
+  } else if (selectedTask) {
+    content = (
       <div className="h-full flex flex-col">
         <div className="p-4 border-b border-theme-border bg-theme-sidebar">
           <button
@@ -53,11 +53,25 @@ export function MobileTasks() {
         </div>
       </div>
     );
+  } else {
+    content = (
+      <div className="h-full">
+        <TaskListPanel />
+      </div>
+    );
   }
 
   return (
-    <div className="h-full">
-      <TaskListPanel />
-    </div>
+    <ErrorBoundary>
+      <Suspense
+        fallback={
+          <div className="h-full flex items-center justify-center text-sm text-theme-muted">
+            Carregando…
+          </div>
+        }
+      >
+        {content}
+      </Suspense>
+    </ErrorBoundary>
   );
 }

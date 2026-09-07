@@ -9,6 +9,7 @@ import { TypographySection } from './sections/TypographySection';
 import { AccessibilitySection } from './sections/AccessibilitySection';
 import { SoundSection } from './sections/SoundSection';
 import { DataSection } from './sections/DataSection';
+import { LoginSection } from './sections/LoginSection';
 import { UndoToast } from './UndoToast';
 
 export function SettingsPage() {
@@ -19,6 +20,7 @@ export function SettingsPage() {
     { id: 'tipografia', title: 'Tipografia', component: TypographySection },
     { id: 'acessibilidade', title: 'Acessibilidade', component: AccessibilitySection },
     { id: 'sons', title: 'Pomodoro & Sons', component: SoundSection },
+    { id: 'conta', title: 'Conta & Sincronização', component: LoginSection },
     { id: 'dados', title: 'Dados', component: DataSection },
   ];
 
@@ -75,7 +77,7 @@ export function SettingsPage() {
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-theme-border text-center">
           <p className="text-sm text-theme-muted">
-            Tarefitas v1.0 — Seus dados ficam salvos apenas neste navegador.
+            Tarefitas v1.0 — Local-first: seus dados ficam no seu dispositivo e, opcionalmente, sincronizados com sua conta.
           </p>
         </div>
       </div>

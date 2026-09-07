@@ -206,7 +206,7 @@ export function AppearanceSection() {
           <div className="flex items-center justify-between">
             <div>
               <div className="font-medium text-theme-text mb-1">Restaurar configurações de aparência</div>
-              <div className="text-sm text-theme-muted">Volta tema, densidade e barras de progresso para os padrões</div>
+              <div className="text-sm text-theme-muted">Volta o tema, a densidade e as barras de progresso ao jeito de antes</div>
             </div>
             <button
               onClick={resetAppearance}

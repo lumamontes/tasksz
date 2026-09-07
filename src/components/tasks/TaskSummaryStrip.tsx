@@ -4,14 +4,14 @@
  */
 
 import type { Task } from '../../types';
-import { parseDateLocal } from '../../utils/dateUtils';
+import { isValidDateString, parseDateLocal } from '../../utils/dateUtils';
 
 interface TaskSummaryStripProps {
   task: Task;
 }
 
 export function TaskSummaryStrip({ task }: TaskSummaryStripProps) {
-  if (!task.scheduledDate) {
+  if (!task.scheduledDate || !isValidDateString(task.scheduledDate)) {
     return null;
   }
 

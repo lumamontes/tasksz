@@ -87,9 +87,10 @@ export function ResizableHandle() {
     <div
       className={`
         relative flex items-center justify-center group cursor-col-resize shrink-0 w-[18px] bg-theme-border
+        transition-colors duration-200
         ${isResizing
-          ? 'bg-theme-accent shadow-lg'
-          : 'hover:bg-theme-accent/40'
+          ? 'bg-theme-accent/25'
+          : 'hover:bg-theme-accent/20'
         }
       `}
       onMouseDown={handleMouseDown}

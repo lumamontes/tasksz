@@ -1,9 +1,14 @@
 /**
  * User Store
- * Manages user profile information (name, auth status)
+ * Backs the RxDB `profile` collection (synced per account).
+ *
+ * The name users see is derived from the auth session (Google/full name or
+ * email), not from a local onboarding step — see `getAuthDisplayName()` in
+ * authStore. This store keeps the profile document in sync across devices.
  */
 
 import { atom } from 'nanostores';
+import { rxSaveProfile } from '../lib/rxdb/bridge';
 
 export interface UserProfile {
   name: string;
@@ -20,37 +25,21 @@ export interface UserState {
 // Default user state
 const defaultUserState: UserState = {
   status: 'anonymous',
-  profile: null
+  profile: null,
 };
 
-// User state atom
+// User state atom (fed by bridge.ts from the RxDB `profile` collection)
 export const $user = atom<UserState>(defaultUserState);
 
-// Actions
-export function setUserName(name: string) {
-  const current = $user.get();
-  $user.set({
-    status: current.status,
-    profile: {
-      name: name.trim() || 'Pessoa',
-      provider: 'local'
-    }
-  });
-}
-
-// Check if user has completed onboarding (has a profile, even if name is default)
-export function hasCompletedOnboarding(): boolean {
-  const user = $user.get();
-  return user.profile !== null;
-}
-
-// Get user name (with fallback)
-export function getUserName(): string {
-  // Avoid hydration mismatch by checking if we're in browser
-  if (typeof window === 'undefined') {
-    return 'Pessoa'; // Always return default on server
-  }
-  
-  const user = $user.get();
-  return user.profile?.name || 'Pessoa';
+// Persists a profile document (e.g. after a display-name change)
+export function saveDisplayName(name: string) {
+  const trimmed = name.trim();
+  const updated: UserState = {
+    status: trimmed ? 'authenticated' : 'anonymous',
+    profile: trimmed
+      ? { name: trimmed, provider: 'local' }
+      : null,
+  };
+  $user.set(updated);
+  void rxSaveProfile(updated);
 }

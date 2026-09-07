@@ -9,9 +9,11 @@ export const MIN_LEFT_WIDTH = 300;
 export const MAX_LEFT_WIDTH = 640;
 export const DEFAULT_LEFT_WIDTH = 360;
 const STORAGE_KEY = 'task-panels-width';
+export const SIDEBAR_STORAGE_KEY = 'task-sidebar-collapsed';
 
 export const $leftPanelWidth = atom<number>(DEFAULT_LEFT_WIDTH);
 export const $isResizing = atom<boolean>(false);
+export const $sidebarCollapsed = atom<boolean>(false);
 
 function clampWidth(width: number): number {
   return Math.max(MIN_LEFT_WIDTH, Math.min(MAX_LEFT_WIDTH, width));
@@ -44,4 +46,17 @@ export function setIsResizing(value: boolean) {
 export function resetLeftPanelWidth() {
   $leftPanelWidth.set(DEFAULT_LEFT_WIDTH);
   saveLeftPanelWidth();
+}
+
+export function loadSidebarCollapsed() {
+  if (typeof window === 'undefined') return;
+  $sidebarCollapsed.set(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true');
+}
+
+export function toggleSidebarCollapsed() {
+  const next = !$sidebarCollapsed.get();
+  $sidebarCollapsed.set(next);
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+  }
 }

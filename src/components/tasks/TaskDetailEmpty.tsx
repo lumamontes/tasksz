@@ -6,10 +6,10 @@
 import { useStore } from '@nanostores/react';
 import { $tasks, $selectedDay } from '../../stores/tasksStore';
 import { openNewTask } from '../../stores/uiStore';
-import { getUserName } from '../../stores/userStore';
+import { getAuthDisplayName } from '../../stores/authStore';
 import { Button } from '../ui/Button';
 import { CheckSquare } from 'lucide-react';
-import { formatDayLabel, getTodayString } from '../../utils/dateUtils';
+import { formatDayLabel, getTodayString, isValidDateString } from '../../utils/dateUtils';
 
 import nextTaskArt from '../../assets/images/undraw_next-task_jtbr.svg';
 
@@ -21,9 +21,9 @@ function toSrc(asset: string | { src: string }): string {
 export function TaskDetailEmpty() {
   const tasks = useStore($tasks);
   const selectedDay = useStore($selectedDay);
-  const isOtherDay = selectedDay !== getTodayString();
+  const isOtherDay = isValidDateString(selectedDay) && selectedDay !== getTodayString();
 
-  const userName = getUserName();
+  const userName = getAuthDisplayName();
   const isFirstTime = tasks.length === 0;
 
   if (isFirstTime) {
@@ -38,12 +38,12 @@ export function TaskDetailEmpty() {
             height={240}
           />
           <h2 className="text-2xl font-semibold text-theme-text mb-3">
-            Olá, {userName}!
+            {userName ? `Olá, ${userName}!` : 'Olá!'}
           </h2>
           <p className="text-theme-muted max-w-sm mb-8">
-            Que bom ter você aqui. Crie sua primeira tarefa para começar a organizar seu dia.
+            Bora começar? Crie sua primeira tarefa e deixe o dia mais leve.
           </p>
-          <Button onClick={openNewTask} variant="primary" size="medium">
+          <Button onClick={() => openNewTask()} variant="primary" size="medium">
             Criar tarefa
           </Button>
         </div>

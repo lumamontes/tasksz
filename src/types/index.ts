@@ -73,6 +73,7 @@ export interface Subtask {
   description?: string;
   done: boolean;
   order: number;
+  updatedAt: Date;
 }
 
 export interface Task {
@@ -137,18 +138,6 @@ export interface HabitCompletion {
   completedAt: Date;
   notes?: string;
   count: number;
-}
-
-export interface PomodoroSession {
-  id: number;
-  userId: number;
-  taskId?: number;
-  duration: number; // in minutes (typically 25)
-  breakDuration: number; // in minutes (typically 5 or 15)
-  completed: boolean;
-  startedAt: Date;
-  completedAt?: Date;
-  notes?: string;
 }
 
 export interface UserPreferences {

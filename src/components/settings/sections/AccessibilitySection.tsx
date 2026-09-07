@@ -12,31 +12,6 @@ export function AccessibilitySection() {
   return (
     <div className="space-y-6">
       
-      {/* Focus Mode */}
-      <div>
-        <h3 className="text-base font-medium text-theme-text mb-4">Modo Foco</h3>
-        <label className="flex items-center justify-between p-3 rounded-lg border border-theme-border hover:border-theme-accent/50 transition-colors cursor-pointer">
-          <div>
-            <div className="font-medium text-theme-text">Ativar modo foco</div>
-            <div className="text-sm text-theme-muted">
-              Esconde distrações e mostra apenas a tarefa atual, próxima subtarefa e pomodoro. Pressione <kbd className="px-1.5 py-0.5 bg-theme-bg text-theme-text rounded text-xs">F</kbd> para alternar rapidamente.
-            </div>
-          </div>
-          <button
-            onClick={() => updateSettings({ focusModeEnabled: !settings.focusModeEnabled })}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent focus:ring-offset-2 ${
-              settings.focusModeEnabled ? 'bg-theme-accent' : 'bg-theme-border'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-theme-sidebar transition-transform ${
-                settings.focusModeEnabled ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </label>
-      </div>
-      
       {/* Reduce Motion */}
       <div>
         <h3 className="text-base font-medium text-theme-text mb-4">Movimento</h3>

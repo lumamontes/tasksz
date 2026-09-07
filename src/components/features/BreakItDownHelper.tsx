@@ -56,7 +56,7 @@ export function BreakItDownHelper({ taskId, onClose }: BreakItDownHelperProps) {
             Quebrar em passos menores
           </h3>
           <p className="text-sm text-theme-muted mb-3">
-            Às vezes uma tarefa parece muito grande. Que tal dividir ela em pedaços menores e mais fáceis de fazer?
+            Às vezes uma tarefa parece muito grande. Que tal dividi-la em pedaços menores e mais fáceis de fazer?
           </p>
           
           <div className="flex gap-2">

@@ -125,7 +125,7 @@ export function RichTextEditor({
           className="min-h-24 px-4 py-3 text-theme-text focus-within:ring-2 focus-within:ring-theme-accent focus-within:border-theme-accent rounded-b-lg prose prose-sm max-w-none"
         />
       </div>
-      <style jsx global>{`
+      <style>{`
         .rich-text-editor .ProseMirror {
           outline: none;
         }

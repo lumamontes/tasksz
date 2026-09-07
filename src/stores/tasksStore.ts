@@ -1,11 +1,25 @@
 /**
  * Tasks and Subtasks Store
  * Manages tasks, subtasks, and selected task state
+ *
+ * Data lives in RxDB (IndexedDB via Dexie) and syncs to Supabase; the atoms
+ * below are the reactive facade made available to components. Mutations write
+ * through the RxDB bridge, and the bridge's collection observables update the
+ * atoms so the UI always reflects the local-first source of truth.
  */
 
 import { atom, computed } from 'nanostores';
 import type { Task, Subtask } from '../types';
-import { getTodayString, parseDateLocal } from '../utils/dateUtils';
+import { getTodayString, isValidDateString, parseDateLocal } from '../utils/dateUtils';
+import { trackEvent } from '../utils/analytics';
+import {
+  rxInsertTask,
+  rxUpdateTask,
+  rxRemoveTask,
+  rxInsertSubtask,
+  rxUpdateSubtask,
+  rxRemoveSubtask,
+} from '../lib/rxdb/bridge';
 
 // Core state atoms
 export const $tasks = atom<Task[]>([]);
@@ -116,9 +130,11 @@ export function setTaskFilter(filter: TaskFilter) {
   $taskFilter.set(filter);
 }
 
-// Action to set the selected day (YYYY-MM-DD)
+// Action to set the selected day (YYYY-MM-DD). Invalid strings are silently ignored.
 export function setSelectedDay(dateStr: string) {
-  $selectedDay.set(dateStr);
+  if (isValidDateString(dateStr)) {
+    $selectedDay.set(dateStr);
+  }
 }
 
 // Action functions
@@ -132,28 +148,22 @@ export function addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'ord
     order: tasks.length
   };
   
-  $tasks.set([...tasks, newTask]);
+  void rxInsertTask(newTask);
+  trackEvent('task_created', { hasDate: Boolean(task.scheduledDate) });
   return newTask.id;
 }
 
 export function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) {
   const tasks = $tasks.get();
-  const updatedTasks = tasks.map(task => 
-    task.id === id 
-      ? { ...task, ...updates, updatedAt: new Date() }
-      : task
-  );
+  const target = tasks.find(task => task.id === id);
+  if (!target) return;
   
-  $tasks.set(updatedTasks);
+  const updated: Task = { ...target, ...updates, updatedAt: new Date() };
+  void rxUpdateTask(id, updated);
 }
 
 export function deleteTask(id: string) {
-  const tasks = $tasks.get();
-  const subtasks = $subtasks.get();
-  
-  // Remove task and its subtasks
-  $tasks.set(tasks.filter(task => task.id !== id));
-  $subtasks.set(subtasks.filter(subtask => subtask.taskId !== id));
+  void rxRemoveTask(id);
   
   // Clear selection if deleted task was selected
   if ($selectedTaskId.get() === id) {
@@ -164,22 +174,27 @@ export function deleteTask(id: string) {
 // Batch actions (multi-select support)
 export function archiveTasks(ids: string[], archived: boolean) {
   const tasks = $tasks.get();
-  $tasks.set(
-    tasks.map((task) =>
-      ids.includes(task.id) ? { ...task, archived, updatedAt: new Date() } : task
-    )
-  );
+  for (const id of ids) {
+    const target = tasks.find(task => task.id === id);
+    if (target) {
+      void rxUpdateTask(id, { ...target, archived, updatedAt: new Date() });
+    }
+  }
 }
 
 export function setTasksScheduledDate(ids: string[], date?: string) {
   const tasks = $tasks.get();
-  $tasks.set(
-    tasks.map((task) =>
-      ids.includes(task.id)
-        ? { ...task, scheduledDate: date || undefined, recurring: undefined, updatedAt: new Date() }
-        : task
-    )
-  );
+  for (const id of ids) {
+    const target = tasks.find(task => task.id === id);
+    if (target) {
+      void rxUpdateTask(id, {
+        ...target,
+        scheduledDate: date || undefined,
+        recurring: undefined,
+        updatedAt: new Date()
+      });
+    }
+  }
 }
 
 export function selectTask(id: string | null) {
@@ -187,13 +202,11 @@ export function selectTask(id: string | null) {
 }
 
 export function reorderTasks(reorderedTasks: Task[]) {
-  const tasksWithNewOrder = reorderedTasks.map((task, index) => ({
-    ...task,
-    order: index,
-    updatedAt: new Date()
-  }));
-  
-  $tasks.set(tasksWithNewOrder);
+  for (let index = 0; index < reorderedTasks.length; index++) {
+    const task = reorderedTasks[index];
+    if (task.order === index) continue;
+    void rxUpdateTask(task.id, { ...task, order: index, updatedAt: new Date() });
+  }
 }
 
 // Subtask actions
@@ -206,43 +219,40 @@ export function addSubtask(taskId: string, title: string) {
     taskId,
     title,
     done: false,
-    order: existingSubtasks.length
+    order: existingSubtasks.length,
+    updatedAt: new Date()
   };
   
-  $subtasks.set([...subtasks, newSubtask]);
+  void rxInsertSubtask(newSubtask);
   return newSubtask.id;
 }
 
 export function updateSubtask(id: string, updates: Partial<Omit<Subtask, 'id' | 'taskId'>>) {
   const subtasks = $subtasks.get();
-  const updatedSubtasks = subtasks.map(subtask =>
-    subtask.id === id 
-      ? { ...subtask, ...updates }
-      : subtask
-  );
+  const target = subtasks.find(subtask => subtask.id === id);
+  if (!target) return;
   
-  $subtasks.set(updatedSubtasks);
+  void rxUpdateSubtask(id, { ...target, ...updates, updatedAt: new Date() });
 }
 
 export function deleteSubtask(id: string) {
-  const subtasks = $subtasks.get();
-  $subtasks.set(subtasks.filter(subtask => subtask.id !== id));
+  void rxRemoveSubtask(id);
 }
 
 export function toggleSubtaskDone(id: string) {
   const subtasks = $subtasks.get();
   const targetSubtask = subtasks.find(s => s.id === id);
+  if (!targetSubtask) return;
   
-  const updatedSubtasks = subtasks.map(subtask =>
-    subtask.id === id 
-      ? { ...subtask, done: !subtask.done }
-      : subtask
-  );
-  
-  $subtasks.set(updatedSubtasks);
+  void rxUpdateSubtask(id, {
+    ...targetSubtask,
+    done: !targetSubtask.done,
+    updatedAt: new Date()
+  });
   
   // Trigger ND celebration system if subtask was completed
   if (targetSubtask && !targetSubtask.done) {
+    trackEvent('subtask_completed');
     // Import dynamically to avoid circular dependency
     if (typeof window !== 'undefined') {
       import('./ndStore').then(({ recordTaskCompletion }) => {
@@ -253,15 +263,11 @@ export function toggleSubtaskDone(id: string) {
 }
 
 export function reorderSubtasks(taskId: string, reorderedSubtasks: Subtask[]) {
-  const allSubtasks = $subtasks.get();
-  const otherSubtasks = allSubtasks.filter(s => s.taskId !== taskId);
-  
-  const reorderedWithNewOrder = reorderedSubtasks.map((subtask, index) => ({
-    ...subtask,
-    order: index
-  }));
-  
-  $subtasks.set([...otherSubtasks, ...reorderedWithNewOrder]);
+  for (let index = 0; index < reorderedSubtasks.length; index++) {
+    const subtask = reorderedSubtasks[index];
+    if (subtask.order === index) continue;
+    void rxUpdateSubtask(subtask.id, { ...subtask, order: index, updatedAt: new Date() });
+  }
 }
 
 // Calendar query functions

@@ -3,32 +3,7 @@
  */
 
 export const APP_NAME = 'Tarefitas';
-export const APP_VERSION = '0.0.1';
-
-// Storage Keys
-export const STORAGE_KEYS = {
-  AUTH_TOKENS: 'tarefitas_auth_tokens',
-  USER_DATA: 'tarefitas_user',
-  ROUTINES: 'tarefitas_routines',
-  COMPLETIONS: 'tarefitas_completions',
-  SETTINGS: 'tarefitas_settings',
-} as const;
-
-// API Endpoints (for future use)
-export const API_ENDPOINTS = {
-  AUTH: '/api/auth',
-  ROUTINES: '/api/routines',
-  COMPLETIONS: '/api/completions',
-  SYNC: '/api/sync',
-} as const;
-
-// Google OAuth Scopes
-export const GOOGLE_SCOPES = [
-  'openid',
-  'email',
-  'profile',
-  'https://www.googleapis.com/auth/calendar',
-] as const;
+export const APP_VERSION = '0.1.0';
 
 // Touch Target Minimums (WCAG AA)
 export const TOUCH_TARGET_MIN = 44; // pixels
@@ -52,7 +27,7 @@ export const SITE_METADATA = {
   description: 'um simples site pra organizar rotina e tarefas',
   url: 'https://tarefitas.netlify.app',
   repoUrl: 'https://github.com/lumamontes/tasksz',
-  privacyPolicyUrl: 'https://tarefitas.netlify.app/privacy-policy',
+  privacyPolicyUrl: '/privacidade',
   contactEmail: 'lumagoesmontes@gmail.com',
   image: '/images/logo.png',
   keywords: ['tarefas', 'rotina', 'organização'],

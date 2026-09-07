@@ -9,6 +9,9 @@ import { $settings, resetSettings } from '../../../stores/settingsStore';
 import { useState } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
+import { rxImportBackup, rxClearAllData } from '../../../lib/rxdb/bridge';
+import type { Task, Subtask } from '../../../types';
+import type { SettingsState } from '../../../stores/settingsStore';
 
 export function DataSection() {
   const tasks = useStore($tasks);
@@ -46,43 +49,55 @@ export function DataSection() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = JSON.parse(e.target?.result as string);
-        
+
         // Basic validation
-        if (!data.tasks || !data.subtasks || !data.settings) {
+        if (!data.tasks && !data.subtasks && !data.settings) {
           alert('Arquivo de backup inválido. Verifique se o arquivo contém todos os dados necessários.');
           return;
         }
 
-        // Confirm import
         if (confirm('Isso irá substituir todos os seus dados atuais. Tem certeza que deseja continuar?')) {
-          // Import data (this would need to be implemented in the stores)
-          console.log('Import data:', data);
-          alert('Funcionalidade de importação será implementada em breve.');
+          const tasks = Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
+          const subtasks = Array.isArray(data.subtasks) ? (data.subtasks as Subtask[]) : [];
+          const settings = (data.settings as SettingsState | undefined);
+
+          await rxImportBackup({ tasks, subtasks, settings });
+          alert('Backup restaurado com sucesso!');
         }
       } catch (error) {
+        console.error('Import failed:', error);
         alert('Erro ao ler o arquivo. Verifique se é um backup válido do Tarefitas.');
+      } finally {
+        // Allow re-selecting the same file
+        event.target.value = '';
       }
     };
     reader.readAsText(file);
   };
 
-  const resetAllData = () => {
-    if (showResetConfirm) {
-      // Reset settings
-      resetSettings();
-      
-      // Clear localStorage
-      localStorage.clear();
-      
-      // Reload page to reset all stores
-      window.location.reload();
-    } else {
+  const resetAllData = async () => {
+    if (!showResetConfirm) {
       setShowResetConfirm(true);
       setTimeout(() => setShowResetConfirm(false), 10000); // Auto-cancel after 10s
+      return;
     }
+
+    setShowResetConfirm(false);
+    await rxClearAllData();
+    resetSettings();
+
+    // Clear legacy localStorage layers (pomodoro state, migration blob…)
+    try {
+      localStorage.clear();
+    } catch {
+      // best-effort
+    }
+
+    // Reload page to reset all stores
+    window.location.reload();
   };
 
   return (
@@ -203,9 +218,9 @@ export function DataSection() {
         <h3 className="text-base font-medium text-theme-text mb-4">Armazenamento</h3>
         <Card padding="sm" variant="sidebar">
           <div className="text-sm text-theme-muted space-y-1">
-            <div>• Todos os dados são armazenados localmente no seu dispositivo</div>
-            <div>• Nenhuma informação é enviada para servidores externos</div>
-            <div>• Os dados ficam disponíveis apenas neste navegador</div>
+            <div>• Seus dados ficam armazenados localmente no dispositivo (IndexedDB)</div>
+            <div>• Sem login, nada é enviado para servidores externos</div>
+            <div>• Com login, os dados sincronizam com sua conta <span className="font-medium">tarefitas</span> via Supabase</div>
             <div>• Faça backups regularmente para não perder seus dados</div>
           </div>
         </Card>
