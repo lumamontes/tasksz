@@ -145,6 +145,7 @@ public/         # Arquivos públicos e screenshots
 ## Documentação
 
 - [Política de privacidade](/privacidade)
+- [Decisões arquiteturais](docs/adr/README.md)
 - [Como contribuir](CONTRIBUTING.md)
 - [Licença MIT](LICENSE)
 
