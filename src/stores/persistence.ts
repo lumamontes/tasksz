@@ -14,6 +14,7 @@
 
 import { getRxDb } from '../lib/rxdb/database';
 import { migrateLocalStorageToRxDb, watchRxDbToAtoms } from '../lib/rxdb/bridge';
+import { recommendReload } from './syncStore';
 
 let isSetup = false;
 
@@ -32,6 +33,7 @@ export async function setupPersistence(): Promise<void> {
     await watchRxDbToAtoms();
   } catch (error) {
     console.error('Failed to initialize local-first storage:', error);
+    if (/DB6|schema|migration/i.test(String(error))) recommendReload();
   }
 }
 

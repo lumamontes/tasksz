@@ -15,6 +15,7 @@ export interface SyncState {
   pendingCount: number;
   lastSyncedAt: string | null;
   lastError: string | null;
+  reloadRecommended: boolean;
 }
 
 export const $syncState = atom<SyncState>({
@@ -22,6 +23,7 @@ export const $syncState = atom<SyncState>({
   pendingCount: 0,
   lastSyncedAt: null,
   lastError: null,
+  reloadRecommended: false,
 });
 
 export function setSyncing(isSyncing: boolean): void {
@@ -42,4 +44,12 @@ export function setLastSyncedAt(timestamp: string): void {
 
 export function setSyncError(error: string | null): void {
   $syncState.set({ ...$syncState.get(), lastError: error });
+}
+
+export function recommendReload(): void {
+  $syncState.set({ ...$syncState.get(), reloadRecommended: true });
+}
+
+export function dismissReloadRecommendation(): void {
+  $syncState.set({ ...$syncState.get(), reloadRecommended: false });
 }

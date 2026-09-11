@@ -9,7 +9,7 @@
 
 import { getSupabase } from '../supabase';
 import { getRxDb, startReplication, type ReplicationHandle } from './database';
-import { setSyncError } from '../../stores/syncStore';
+import { recommendReload, setSyncError } from '../../stores/syncStore';
 
 let active: ReplicationHandle | null = null;
 
@@ -28,6 +28,10 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
     active = await startReplication(supabase, accountId);
     for (const state of [active.tasks, active.subtasks, active.settings, active.profile]) {
       state.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
+      state.error$.subscribe((err) => {
+        const message = err?.message ?? '';
+        if (/400|column|schema|relation|not found/i.test(message)) recommendReload();
+      });
     }
   } catch (err) {
     setSyncError(err instanceof Error ? err.message : 'Não foi possível iniciar a sincronização.');

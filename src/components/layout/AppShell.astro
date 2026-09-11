@@ -11,6 +11,7 @@ import { SettingsPage } from '../settings/SettingsPage';
 import { CelebrationHost } from '../celebration/CelebrationHost';
 import { FloatingPomodoro } from '../pomodoro/FloatingPomodoro';
 import { AuthModal } from '../auth/AuthModal';
+import { SyncReloadNotice } from '../sync/SyncReloadNotice';
 ---
 
 <div id="app-shell" class="flex h-screen bg-theme-bg font-sans text-theme-text overflow-hidden">
@@ -61,6 +62,7 @@ import { AuthModal } from '../auth/AuthModal';
 
   <!-- Sign-in / sign-up modal (opened from the sidebar CTA) -->
   <AuthModal client:load />
+  <SyncReloadNotice client:load />
 </div>
 
 <script>

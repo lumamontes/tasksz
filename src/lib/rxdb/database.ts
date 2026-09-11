@@ -11,9 +11,10 @@
  * MB to GB, far beyond localStorage's ~5MB, with no extra setup cost.
  */
 
-import { createRxDatabase, type RxDatabase, type RxCollection } from 'rxdb/plugins/core';
+import { createRxDatabase, addRxPlugin, type RxDatabase, type RxCollection } from 'rxdb/plugins/core';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { replicateSupabase, type RxSupabaseReplicationState } from 'rxdb/plugins/replication-supabase';
+import { RxDBMigrationPlugin } from 'rxdb/plugins/migration-schema';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   TASK_SCHEMA,
@@ -93,6 +94,8 @@ function toServerDocument<T extends object>(document: T): T {
 
 let dbPromise: Promise<RxDatabase<RxCollections>> | null = null;
 let cachedDb: RxDatabase<RxCollections> | null = null;
+
+addRxPlugin(RxDBMigrationPlugin);
 
 export function getRxDb(): Promise<RxDatabase<RxCollections>> {
   if (cachedDb) return Promise.resolve(cachedDb);
