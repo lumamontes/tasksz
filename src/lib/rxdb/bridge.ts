@@ -31,6 +31,10 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function toIsoDate(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
 function accountScopedId(kind: 'settings' | 'profile'): string {
   return `${getCurrentAccount() || 'guest'}:${kind}`;
 }
@@ -101,7 +105,7 @@ function taskToDoc(task: Task): Omit<TaskDoc, 'accountId' | '_modified' | '_dele
     assigneeId: (task.assigneeId ?? getCurrentAccount()) || undefined,
     title: task.title,
     description: task.description ?? '',
-    createdAt: task.createdAt.toISOString(),
+    createdAt: toIsoDate(task.createdAt),
     order: task.order,
     archived: task.archived,
     scheduledDate: task.scheduledDate ?? undefined,
