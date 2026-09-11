@@ -38,6 +38,17 @@ function isExpectedConflict(error: unknown): boolean {
   );
 }
 
+function shouldRecommendReload(error: unknown): boolean {
+  const value = error as { code?: unknown; message?: unknown } | null;
+  const code = String(value?.code ?? '');
+  const message = String(value?.message ?? error ?? '');
+  return (
+    code === '42703' ||
+    code === 'PGRST100' ||
+    /column .* does not exist|failed to parse (filter|order)/i.test(message)
+  );
+}
+
 /**
  * Start two-way sync for a signed-in user. Replaces any previous replication
  * (e.g. after switching accounts).
@@ -55,8 +66,7 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
     for (const state of states) {
       state.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
       state.error$.subscribe((err) => {
-        const message = err?.message ?? '';
-        if (!isExpectedConflict(err) && /column|schema|relation|migration|plugin|not found/i.test(message)) {
+        if (!isExpectedConflict(err) && shouldRecommendReload(err)) {
           recommendReload();
         }
         if (isPermanentSyncError(err)) {
