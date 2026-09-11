@@ -15,7 +15,7 @@ import { SITE_METADATA } from '../../utils/constants';
 <div class="h-full flex flex-col">
   <!-- Header Section -->
   <div class="p-6 border-b border-theme-border flex items-center justify-between gap-2 sidebar-header">
-    <SidebarGreeting client:load />
+    <SidebarGreeting client:only="react" />
     <SidebarCollapseButton client:load />
   </div>
 

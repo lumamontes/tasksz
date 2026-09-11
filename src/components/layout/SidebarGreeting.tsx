@@ -6,7 +6,6 @@
  */
 
 import { useStore } from '@nanostores/react';
-import { useEffect, useState } from 'react';
 import { $auth, getAuthDisplayName } from '../../stores/authStore';
 import { getInitials } from '../../utils/text';
 
@@ -20,18 +19,11 @@ function getGreeting(date: Date): string {
 export function SidebarGreeting() {
   const auth = useStore($auth);
   const displayName = getAuthDisplayName();
-  const [now, setNow] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setNow(new Date());
-  }, []);
-
-  const formattedDate = now
-    ? `Hoje · ${now.toLocaleDateString('pt-BR', {
-        day: 'numeric',
-        month: 'short',
-      })}`
-    : 'Hoje';
+  const now = new Date();
+  const formattedDate = `Hoje · ${now.toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'short',
+  })}`;
 
   return (
     <div className="flex items-center gap-3 min-w-0 sidebar-label">
@@ -61,7 +53,7 @@ export function SidebarGreeting() {
       </span>
       <div className="min-w-0">
         <h1 className="text-xl font-semibold text-theme-text mb-0.5 truncate">
-          {displayName ? `Olá, ${displayName} :)` : now ? getGreeting(now) : 'Olá'}
+          {displayName ? `Olá, ${displayName} :)` : getGreeting(now)}
         </h1>
         <p className="text-sm text-theme-muted truncate">{formattedDate}</p>
       </div>
