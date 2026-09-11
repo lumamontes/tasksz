@@ -56,9 +56,6 @@ No **SQL Editor** do projeto, execute uma vez o arquivo
 `tasks`, `subtasks`, `settings` e `profile`, configura as políticas de segurança
 por conta e ativa o realtime.
 
-Se as tabelas foram criadas com uma versão anterior do projeto, execute também
-[`supabase/migrate-camelcase.sql`](supabase/migrate-camelcase.sql) uma vez. Ele
-corrige os nomes das colunas e recria as políticas RLS.
 
 ### 3. Configurar as variáveis de ambiente
 

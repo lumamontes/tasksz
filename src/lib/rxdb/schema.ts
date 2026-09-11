@@ -18,6 +18,9 @@ import type { RxJsonSchema } from 'rxdb';
 export interface TaskDoc {
   id: string;
   accountId: string;
+  createdBy?: string;
+  projectId?: string;
+  assigneeId?: string;
   title: string;
   description?: string;
   createdAt: string; // ISO-8601
@@ -73,6 +76,9 @@ export const TASK_SCHEMA: RxJsonSchema<TaskDoc> = {
   properties: {
     id: { type: 'string', maxLength: 200 },
     accountId: { type: 'string' },
+    createdBy: { type: 'string' },
+    projectId: { type: 'string' },
+    assigneeId: { type: 'string' },
     title: { type: 'string' },
     description: { type: 'string' },
     createdAt: { type: 'string' },

@@ -49,5 +49,9 @@ const {
 	</head>
 	<body class="bg-theme-bg font-sans text-theme-text antialiased min-h-screen">
 		<slot />
+		<script>
+			import { initAnalytics } from '../utils/analytics';
+			initAnalytics();
+		</script>
 	</body>
 </html>

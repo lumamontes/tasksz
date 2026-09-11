@@ -54,14 +54,14 @@ export function initAnalytics(): void {
 
   if (posthogKey && posthogHost) {
     loadPostHog().then((posthog) => {
-      posthog.init(posthogKey!, {
-        api_host: posthogHost,
-        capture_pageview: false,
-        capture_pageleave: false,
-        loaded: () => {
-          posthog.capture('$pageview');
-        },
-      });
+        posthog.init(posthogKey!, {
+          api_host: posthogHost,
+          capture_pageview: false,
+          capture_pageleave: false,
+          loaded: () => {
+            posthog.capture('$pageview');
+          },
+        });
     });
   }
 
@@ -71,13 +71,18 @@ export function initAnalytics(): void {
     win.gtag = function gtag(...args: unknown[]) {
       win.dataLayer!.push(args);
     };
-    // Load the GA4 loader script.
+    win.gtag('js', new Date() as unknown as string);
+
+    // Load the GA4 loader script, then explicitly send the first page view.
+    // Waiting for onload makes failures visible in the browser network panel
+    // instead of leaving only a queued dataLayer entry.
     const s = document.createElement('script');
     s.async = true;
     s.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`;
+    s.onload = () => {
+      win.gtag?.('config', ga4Id, { send_page_view: true });
+    };
     document.head.appendChild(s);
-    win.gtag('js', new Date() as unknown as string);
-    win.gtag('config', ga4Id);
   }
 }
 

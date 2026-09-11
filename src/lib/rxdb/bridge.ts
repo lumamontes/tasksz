@@ -31,6 +31,10 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function accountScopedId(kind: 'settings' | 'profile'): string {
+  return `${getCurrentAccount() || 'guest'}:${kind}`;
+}
+
 /**
  * The account id currently writing to Supabase (auth user id). Set when a
  * user signs in; guests write with a blank accountId so their data stays
@@ -74,11 +78,16 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
       subtasks.map((s) => ({ ...s.toJSON(), accountId, _modified: nowIso() }))
     ),
     db.settings.bulkUpsert(
-      settings.map((s) => ({ ...s.toJSON(), accountId, _modified: nowIso() }))
+      settings.map((s) => ({ ...s.toJSON(), id: accountScopedId('settings'), accountId, _modified: nowIso() }))
     ),
     db.profile.bulkUpsert(
-      profiles.map((p) => ({ ...p.toJSON(), accountId, _modified: nowIso() }))
+      profiles.map((p) => ({ ...p.toJSON(), id: accountScopedId('profile'), accountId, _modified: nowIso() }))
     ),
+  ]);
+
+  await Promise.all([
+    ...settings.map((setting) => setting.remove()),
+    ...profiles.map((profile) => profile.remove()),
   ]);
 }
 
@@ -87,6 +96,9 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
 function taskToDoc(task: Task): Omit<TaskDoc, 'accountId' | '_modified' | '_deleted'> {
   return {
     id: task.id,
+    createdBy: (task.createdBy ?? getCurrentAccount()) || undefined,
+    projectId: task.projectId,
+    assigneeId: (task.assigneeId ?? getCurrentAccount()) || undefined,
     title: task.title,
     description: task.description ?? '',
     createdAt: task.createdAt.toISOString(),
@@ -100,6 +112,9 @@ function taskToDoc(task: Task): Omit<TaskDoc, 'accountId' | '_modified' | '_dele
 function docToTask(doc: TaskDoc): Task {
   return {
     id: doc.id,
+    createdBy: doc.createdBy ?? undefined,
+    projectId: doc.projectId ?? undefined,
+    assigneeId: doc.assigneeId ?? undefined,
     title: doc.title,
     description: doc.description ? String(doc.description) : undefined,
     createdAt: new Date(doc.createdAt),
@@ -300,7 +315,7 @@ export async function rxSaveSettings(settings: SettingsState): Promise<void> {
   const db = await getRxDb();
   const existing = await db.settings.findOne({ selector: { accountId: getCurrentAccount() } }).exec();
   await db.settings.upsert({
-    id: existing?.id ?? 'default',
+    id: existing?.id ?? accountScopedId('settings'),
     ...settingsToDoc(settings),
     accountId: getCurrentAccount(),
     _modified: nowIso(),
@@ -312,7 +327,7 @@ export async function rxSaveProfile(user: UserState): Promise<void> {
   const db = await getRxDb();
   const existing = await db.profile.findOne({ selector: { accountId: getCurrentAccount() } }).exec();
   await db.profile.upsert({
-    id: existing?.id ?? 'default',
+    id: existing?.id ?? accountScopedId('profile'),
     ...profileToDoc(user),
     accountId: getCurrentAccount(),
     _modified: nowIso(),

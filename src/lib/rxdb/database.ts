@@ -49,6 +49,48 @@ export interface ReplicationHandle {
   profile: RxSupabaseReplicationState<ProfileDoc>;
 }
 
+const FIELD_NAMES = [
+  ['accountId', 'account_id'],
+  ['createdBy', 'created_by'],
+  ['projectId', 'project_id'],
+  ['assigneeId', 'assignee_id'],
+  ['createdAt', 'created_at'],
+  ['scheduledDate', 'scheduled_date'],
+  ['taskId', 'task_id'],
+  ['themeId', 'theme_id'],
+  ['customPalette', 'custom_palette'],
+  ['fontId', 'font_id'],
+  ['fontScale', 'font_scale'],
+  ['showProgressBars', 'show_progress_bars'],
+  ['reduceMotion', 'reduce_motion'],
+  ['soundEnabled', 'sound_enabled'],
+  ['celebrationsEnabled', 'celebrations_enabled'],
+] as const;
+
+function mapFields<T extends object>(
+  document: T,
+  direction: 'toServer' | 'toLocal',
+): T {
+  const mapped = { ...document } as Record<string, unknown>;
+  for (const [localName, serverName] of FIELD_NAMES) {
+    const source = direction === 'toServer' ? localName : serverName;
+    const target = direction === 'toServer' ? serverName : localName;
+    if (source in mapped) {
+      mapped[target] = mapped[source];
+      delete mapped[source];
+    }
+  }
+  return mapped as T;
+}
+
+function toLocalDocument<T extends object>(document: T): T {
+  return mapFields(document, 'toLocal');
+}
+
+function toServerDocument<T extends object>(document: T): T {
+  return mapFields(document, 'toServer');
+}
+
 let dbPromise: Promise<RxDatabase<RxCollections>> | null = null;
 let cachedDb: RxDatabase<RxCollections> | null = null;
 
@@ -96,9 +138,10 @@ export async function startReplication(
     live: true,
     pull: {
       batchSize: 100,
-      queryBuilder: ({ query }: { query: any }) => query.eq('accountId', accountId),
+      queryBuilder: ({ query }: { query: any }) => query.eq('account_id', accountId),
+      modifier: toLocalDocument,
     },
-    push: { batchSize: 100 },
+    push: { batchSize: 100, modifier: toServerDocument },
   };
 
   const tasks = replicateSupabase<TaskDoc>({

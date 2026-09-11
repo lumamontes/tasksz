@@ -78,6 +78,12 @@ export interface Subtask {
 
 export interface Task {
   id: string;
+  /** Account that originally created the task. */
+  createdBy?: string;
+  /** Optional shared project. Empty means a personal task. */
+  projectId?: string;
+  /** A task always has at most one responsible person. */
+  assigneeId?: string;
   title: string;
   description?: string;
   createdAt: Date;
