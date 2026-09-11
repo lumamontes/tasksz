@@ -56,6 +56,7 @@ const FIELD_NAMES = [
   ['projectId', 'project_id'],
   ['assigneeId', 'assignee_id'],
   ['createdAt', 'created_at'],
+  ['order', 'sort_order'],
   ['scheduledDate', 'scheduled_date'],
   ['taskId', 'task_id'],
   ['themeId', 'theme_id'],

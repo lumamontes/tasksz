@@ -10,7 +10,7 @@ export function SyncReloadNotice() {
       role="status"
       className="fixed top-3 left-1/2 z-[60] flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-theme-border bg-theme-sidebar px-4 py-3 text-sm text-theme-text shadow-lg"
     >
-      <span className="flex-1">Uma atualização está disponível para manter a sincronização funcionando.</span>
+       <span className="flex-1">Uma atualização está disponível.</span>
       <button
         type="button"
         onClick={() => window.location.reload()}

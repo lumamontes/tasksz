@@ -17,6 +17,18 @@ import {
 
 let active: ReplicationHandle | null = null;
 
+function isPermanentSyncError(error: unknown): boolean {
+  const value = error as { code?: unknown; message?: unknown } | null;
+  const code = String(value?.code ?? '');
+  const message = String(value?.message ?? error ?? '');
+  return (
+    /^PGRST\d+$/.test(code) ||
+    code === '42501' ||
+    code === '42703' ||
+    /failed to parse order|column .* does not exist|row-level security policy/i.test(message)
+  );
+}
+
 /**
  * Start two-way sync for a signed-in user. Replaces any previous replication
  * (e.g. after switching accounts).
@@ -37,6 +49,11 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
         const message = err?.message ?? '';
         if (/column|schema|relation|migration|plugin|not found/i.test(message)) {
           recommendReload();
+        }
+        if (isPermanentSyncError(err)) {
+          // Retrying a malformed PostgREST query cannot succeed. Stop this
+          // replication until the client is updated or the problem is fixed.
+          void stopSync();
         }
       });
     }

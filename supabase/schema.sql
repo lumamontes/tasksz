@@ -127,7 +127,7 @@ create table if not exists public.tasks (
   title        text not null,
   description  text not null default '',
   created_at   text not null,
-  "order"      numeric not null default 0,
+  sort_order   numeric not null default 0,
   archived     boolean not null default false,
   scheduled_date text,
   recurring    text,
@@ -135,6 +135,21 @@ create table if not exists public.tasks (
   _modified timestamptz not null default now(),
   _deleted  boolean not null default false
 );
+
+-- `order` is reserved by PostgREST as a query parameter. Move legacy rows to
+-- `sort_order` so replication can use equality filters without ambiguity.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tasks' and column_name = 'order'
+  ) and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tasks' and column_name = 'sort_order'
+  ) then
+    alter table public.tasks rename column "order" to sort_order;
+  end if;
+end $$;
 
 alter table public.tasks add column if not exists created_by text;
 update public.tasks set created_by = account_id where created_by is null;
@@ -182,11 +197,24 @@ create table if not exists public.subtasks (
   title       text not null,
   description text not null default '',
   done        boolean not null default false,
-  "order"     numeric not null default 0,
+  sort_order  numeric not null default 0,
 
   _modified timestamptz not null default now(),
   _deleted  boolean not null default false
 );
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'subtasks' and column_name = 'order'
+  ) and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'subtasks' and column_name = 'sort_order'
+  ) then
+    alter table public.subtasks rename column "order" to sort_order;
+  end if;
+end $$;
 
 alter table public.subtasks enable row level security;
 
