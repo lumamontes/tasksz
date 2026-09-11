@@ -90,7 +90,17 @@ function toLocalDocument<T extends object>(document: T): T {
 }
 
 function toServerDocument<T extends object>(document: T): T {
-  return mapFields(document, 'toServer');
+  const mapped = mapFields(document, 'toServer') as Record<string, unknown>;
+  const accountId = mapped.account_id;
+
+  // Older local documents used the shared `default` primary key. Normalize
+  // those queued writes before they reach the account-scoped remote tables.
+  if (mapped.id === 'default' && typeof accountId === 'string' && accountId) {
+    if ('theme_id' in mapped) mapped.id = `${accountId}:settings`;
+    if ('name' in mapped) mapped.id = `${accountId}:profile`;
+  }
+
+  return mapped as T;
 }
 
 let dbPromise: Promise<RxDatabase<RxCollections>> | null = null;
