@@ -29,6 +29,15 @@ function isPermanentSyncError(error: unknown): boolean {
   );
 }
 
+function isExpectedConflict(error: unknown): boolean {
+  const value = error as { code?: unknown; status?: unknown; message?: unknown } | null;
+  return (
+    String(value?.code ?? '') === '23505' ||
+    Number(value?.status) === 409 ||
+    /duplicate key value|unique constraint/i.test(String(value?.message ?? error ?? ''))
+  );
+}
+
 /**
  * Start two-way sync for a signed-in user. Replaces any previous replication
  * (e.g. after switching accounts).
@@ -47,7 +56,7 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
       state.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
       state.error$.subscribe((err) => {
         const message = err?.message ?? '';
-        if (/column|schema|relation|migration|plugin|not found/i.test(message)) {
+        if (!isExpectedConflict(err) && /column|schema|relation|migration|plugin|not found/i.test(message)) {
           recommendReload();
         }
         if (isPermanentSyncError(err)) {
