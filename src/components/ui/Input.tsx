@@ -4,7 +4,7 @@
  * ND-safe: Clear labels, proper focus states
  */
 
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 import { useStore } from '@nanostores/react';
 import { $settings } from '../../stores/settingsStore';
 
@@ -31,8 +31,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     ref
   ) => {
     const settings = useStore($settings);
+    const generatedId = useId();
 
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const inputId = id || `input-${generatedId}`;
     const errorId = error ? `${inputId}-error` : undefined;
     const helperId = helperText ? `${inputId}-helper` : undefined;
 

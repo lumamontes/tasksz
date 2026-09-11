@@ -58,7 +58,7 @@ import { SyncReloadNotice } from '../sync/SyncReloadNotice';
   <CelebrationHost client:idle />
 
   <!-- Detached pomodoro timer (floating, always accessible) -->
-  <FloatingPomodoro client:load />
+  <FloatingPomodoro client:only="react" />
 
   <!-- Sign-in / sign-up modal (opened from the sidebar CTA) -->
   <AuthModal client:load />
