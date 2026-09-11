@@ -43,8 +43,19 @@ function mapRestFilterFields(input: RequestInfo | URL, init?: RequestInit): Prom
   for (const [localName, serverName] of Object.entries(REST_FIELD_NAMES)) {
     const values = requestUrl.searchParams.getAll(localName);
     if (!values.length) continue;
+
+    // PostgREST also uses the `order` query parameter for sorting, for example
+    // `order=_modified.asc,id.asc`. Only rewrite filter expressions such as
+    // `order=eq.0`.
+    const filterValues = values.filter((value) =>
+      /^(eq|neq|gt|gte|lt|lte|is|in|like|ilike|cs|cd|ov|fts|plfts|phfts|not\.)/.test(value)
+    );
+    if (localName === 'order' && !filterValues.length) continue;
+
     requestUrl.searchParams.delete(localName);
-    for (const value of values) requestUrl.searchParams.append(serverName, value);
+    for (const value of localName === 'order' ? filterValues : values) {
+      requestUrl.searchParams.append(serverName, value);
+    }
   }
 
   const request = input instanceof Request ? new Request(requestUrl, input) : requestUrl;
