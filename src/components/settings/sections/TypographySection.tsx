@@ -38,13 +38,6 @@ export function TypographySection() {
       sample: 'Aa Bb Cc 123',
       stack: 'Lexend'
     },
-    {
-      id: 'opendyslexic' as FontId,
-      name: 'OpenDyslexic',
-      description: 'Desenhada para pessoas com dislexia',
-      sample: 'Aa Bb Cc 123',
-      stack: 'OpenDyslexic'
-    }
   ];
 
   const fontScales = [
@@ -80,11 +73,6 @@ export function TypographySection() {
                     </svg>
                   )}
                 </div>
-                {font.id === 'opendyslexic' && (
-                  <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
-                    Arquivo necessário
-                  </span>
-                )}
               </div>
               <p className="text-sm text-theme-muted mb-2">{font.description}</p>
               <div 
@@ -97,21 +85,6 @@ export function TypographySection() {
           ))}
         </div>
         
-        {/* OpenDyslexic Note */}
-        <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <svg className="w-4 h-4 text-orange-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            <div className="text-sm">
-              <p className="font-medium text-orange-800">Sobre a fonte OpenDyslexic</p>
-              <p className="text-orange-700 mt-1">
-                Para usar esta fonte, baixe os arquivos de <a href="https://opendyslexic.org/" target="_blank" rel="noopener" className="underline">opendyslexic.org</a> e 
-                coloque-os na pasta <code className="bg-orange-100 px-1 rounded">public/fonts/</code> do projeto.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Font Scale */}
@@ -137,26 +110,6 @@ export function TypographySection() {
               )}
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* Font Preview */}
-      <div>
-        <h3 className="text-base font-medium text-theme-text mb-4">Prévia</h3>
-        <div className="p-4 border border-theme-border rounded-lg bg-theme-sidebar">
-          <div className="space-y-3">
-            <h4 className="text-xl font-semibold text-theme-text">
-              Título da Tarefa de Exemplo
-            </h4>
-            <p className="text-theme-muted">
-              Esta é uma descrição de exemplo para mostrar como o texto aparecerá com as configurações atuais. 
-              O texto deve ser confortável de ler e não deve causar fadiga visual.
-            </p>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-theme-text">Subtarefa exemplo</span>
-              <div className="w-4 h-4 border-2 border-theme-accent rounded"></div>
-            </div>
-          </div>
         </div>
       </div>
 

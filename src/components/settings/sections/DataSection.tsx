@@ -18,6 +18,12 @@ export function DataSection() {
   const subtasks = useStore($subtasks);
   const settings = useStore($settings);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const themeLabels: Record<SettingsState['themeId'], string> = {
+    'calm-beige': 'Bege calmo',
+    'high-contrast': 'Alto contraste',
+    'low-stimulation': 'Baixa estimulação',
+    custom: 'Personalizado',
+  };
 
   const exportData = () => {
     const data = {
@@ -116,7 +122,7 @@ export function DataSection() {
             <div className="text-sm text-theme-muted">Subtarefas</div>
           </Card>
           <Card padding="sm" variant="sidebar">
-            <div className="text-2xl font-semibold text-theme-text">{settings.themeId}</div>
+            <div className="text-2xl font-semibold text-theme-text">{themeLabels[settings.themeId] ?? settings.themeId}</div>
             <div className="text-sm text-theme-muted">Tema Atual</div>
           </Card>
         </div>

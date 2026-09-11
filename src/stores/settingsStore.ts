@@ -154,7 +154,8 @@ export function applyFont(settings: SettingsState) {
   const scaleMap = { sm: '14px', md: '16px', lg: '18px', xl: '20px' };
   
   const root = document.documentElement;
-  root.style.setProperty('--font-family', fontStacks[settings.fontId]);
+  // Older saved settings may still reference the removed OpenDyslexic option.
+  root.style.setProperty('--font-family', fontStacks[settings.fontId] || fontStacks.system);
   root.style.setProperty('--font-size-base', scaleMap[settings.fontScale]);
 }
 
