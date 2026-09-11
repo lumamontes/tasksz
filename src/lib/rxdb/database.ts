@@ -91,34 +91,39 @@ export async function startReplication(
 ): Promise<ReplicationHandle> {
   const db = await getRxDb();
   const baseId = `supabase-${accountId}`;
+  const replicationOptions = {
+    client: supabase,
+    live: true,
+    pull: {
+      batchSize: 100,
+      queryBuilder: ({ query }: { query: any }) => query.eq('accountId', accountId),
+    },
+    push: { batchSize: 100 },
+  };
 
   const tasks = replicateSupabase<TaskDoc>({
     replicationIdentifier: `${baseId}-tasks`,
     tableName: 'tasks',
-    client: supabase,
     collection: db.tasks,
-    live: true,
+    ...replicationOptions,
   });
   const subtasks = replicateSupabase<SubtaskDoc>({
     replicationIdentifier: `${baseId}-subtasks`,
     tableName: 'subtasks',
-    client: supabase,
     collection: db.subtasks,
-    live: true,
+    ...replicationOptions,
   });
   const settings = replicateSupabase<SettingsDoc>({
     replicationIdentifier: `${baseId}-settings`,
     tableName: 'settings',
-    client: supabase,
     collection: db.settings,
-    live: true,
+    ...replicationOptions,
   });
   const profile = replicateSupabase<ProfileDoc>({
     replicationIdentifier: `${baseId}-profile`,
     tableName: 'profile',
-    client: supabase,
     collection: db.profile,
-    live: true,
+    ...replicationOptions,
   });
 
   return { tasks, subtasks, settings, profile };

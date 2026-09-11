@@ -20,13 +20,13 @@
 -- ---------------------------------------------------------------------------
 create table if not exists public.tasks (
   id           text primary key,
-  accountId    text not null,
+  "accountId"  text not null,
   title        text not null,
   description  text not null default '',
-  createdAt    text not null,
+  "createdAt"  text not null,
   "order"      numeric not null default 0,
   archived     boolean not null default false,
-  scheduledDate text,
+  "scheduledDate" text,
   recurring    text,
 
   _modified timestamptz not null default now(),
@@ -45,15 +45,16 @@ create policy "users can insert own tasks"
 
 create policy "users can update own tasks"
   on public.tasks for update
-  using (auth.uid()::text = "accountId");
+  using (auth.uid()::text = "accountId")
+  with check (auth.uid()::text = "accountId");
 
 -- ---------------------------------------------------------------------------
 -- Table: subtasks
 -- ---------------------------------------------------------------------------
 create table if not exists public.subtasks (
   id          text primary key,
-  accountId   text not null,
-  taskId      text not null,
+  "accountId" text not null,
+  "taskId"    text not null,
   title       text not null,
   description text not null default '',
   done        boolean not null default false,
@@ -75,27 +76,28 @@ create policy "users can insert own subtasks"
 
 create policy "users can update own subtasks"
   on public.subtasks for update
-  using (auth.uid()::text = "accountId");
+  using (auth.uid()::text = "accountId")
+  with check (auth.uid()::text = "accountId");
 
 -- ---------------------------------------------------------------------------
 -- Table: settings (single row per account, id 'default')
 -- ---------------------------------------------------------------------------
 create table if not exists public.settings (
   id             text primary key,
-  accountId      text not null,
-  themeId        text not null default 'calm-beige',
-  customPalette  text,
-  fontId         text not null default 'system',
-  fontScale      text not null default 'md',
+  "accountId"    text not null,
+  "themeId"      text not null default 'calm-beige',
+  "customPalette" text,
+  "fontId"       text not null default 'system',
+  "fontScale"    text not null default 'md',
   density        text not null default 'cozy',
-  showProgressBars boolean not null default true,
-  reduceMotion   boolean not null default false,
-  soundEnabled   boolean not null default false,
-  pomodoroSound  text not null default 'none',
-  soundVolume    numeric not null default 0.6,
-  tickSoundEnabled boolean not null default false,
-  focusModeEnabled boolean not null default false,
-  celebrationsEnabled boolean not null default false,
+  "showProgressBars" boolean not null default true,
+  "reduceMotion" boolean not null default false,
+  "soundEnabled" boolean not null default false,
+  "pomodoroSound" text not null default 'none',
+  "soundVolume" numeric not null default 0.6,
+  "tickSoundEnabled" boolean not null default false,
+  "focusModeEnabled" boolean not null default false,
+  "celebrationsEnabled" boolean not null default false,
   pomodoro       text,
 
   _modified timestamptz not null default now(),
@@ -114,14 +116,15 @@ create policy "users can insert own settings"
 
 create policy "users can update own settings"
   on public.settings for update
-  using (auth.uid()::text = "accountId");
+  using (auth.uid()::text = "accountId")
+  with check (auth.uid()::text = "accountId");
 
 -- ---------------------------------------------------------------------------
 -- Table: profile (single row per account, id 'default')
 -- ---------------------------------------------------------------------------
 create table if not exists public.profile (
   id        text primary key,
-  accountId text not null,
+  "accountId" text not null,
   name      text not null default '',
 
   _modified timestamptz not null default now(),
@@ -140,7 +143,8 @@ create policy "users can insert own profile"
 
 create policy "users can update own profile"
   on public.profile for update
-  using (auth.uid()::text = "accountId");
+  using (auth.uid()::text = "accountId")
+  with check (auth.uid()::text = "accountId");
 
 -- ---------------------------------------------------------------------------
 -- `_modified` auto-update trigger (all tables)

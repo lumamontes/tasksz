@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { ptBR } from 'react-day-picker/locale/pt-BR';
-import { parseDateLocal, formatDateLocal } from '../../utils/dateUtils';
+import { parseDateLocal, formatDateLocal, isValidDateString } from '../../utils/dateUtils';
 
 interface TaskDatePickerProps {
   value?: string;
@@ -18,10 +18,10 @@ interface TaskDatePickerProps {
 
 export function TaskDatePicker({ value, onChange, id }: TaskDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const selected = value ? parseDateLocal(value) : undefined;
+  const selected = value && isValidDateString(value) ? parseDateLocal(value) : undefined;
 
   const handleSelect = (day: Date | undefined) => {
-    onChange(day ? formatDateLocal(day) : undefined);
+    onChange(day && !Number.isNaN(day.getTime()) ? formatDateLocal(day) : undefined);
     setIsOpen(false);
   };
 
@@ -37,8 +37,8 @@ export function TaskDatePicker({ value, onChange, id }: TaskDatePickerProps) {
           value ? 'border border-theme-accent' : 'border border-theme-border'
         }`}
       >
-        {value
-          ? selected?.toLocaleDateString('pt-BR', {
+        {selected
+          ? selected.toLocaleDateString('pt-BR', {
               weekday: 'long',
               day: 'numeric',
               month: 'long',

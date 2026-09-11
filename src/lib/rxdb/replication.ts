@@ -26,7 +26,9 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
     const db = await getRxDb();
     void db; // database must exist; watcher already running at boot
     active = await startReplication(supabase, accountId);
-    active.tasks.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
+    for (const state of [active.tasks, active.subtasks, active.settings, active.profile]) {
+      state.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
+    }
   } catch (err) {
     setSyncError(err instanceof Error ? err.message : 'Não foi possível iniciar a sincronização.');
   }

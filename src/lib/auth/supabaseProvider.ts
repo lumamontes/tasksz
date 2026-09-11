@@ -63,11 +63,11 @@ class SupabaseAuthProvider implements AuthProvider {
   async signInWithOAuth(provider: 'google'): Promise<void> {
     const supabase = getSupabase();
     if (!supabase) throw new Error('Sincronização não configurada.');
-    // Redirect straight back to wherever the user was. Supabase injects the
-    // session tokens into the URL hash; `getSession()` restores it on return.
+    // Always return to the app after OAuth. Returning to the landing page
+    // leaves the user authenticated but does not open the dashboard.
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: `${window.location.origin}/app/tarefas` },
     });
     if (error) throw error;
   }

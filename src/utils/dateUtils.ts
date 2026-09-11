@@ -1,16 +1,17 @@
 /**
  * Date Utilities
- * Helper functions for handling local dates (YYYY-MM-DD format)
+ * Helper functions for handling local dates (YYYY-MM-DD format).
+ * date-fns provides the parsing and calendar validation so we do not rely on
+ * the browser's inconsistent Date string parsing behavior.
  */
+
+import { format, isValid, parse } from 'date-fns';
 
 /**
  * Format a Date object to YYYY-MM-DD string (local time, not UTC)
  */
 export function formatDateLocal(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return format(date, 'yyyy-MM-dd');
 }
 
 /**
@@ -19,13 +20,14 @@ export function formatDateLocal(date: Date): string {
  */
 export function parseDateLocal(dateStr: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return new Date(NaN);
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  return parse(dateStr, 'yyyy-MM-dd', new Date(0));
 }
 
-/** True when a YYYY-MM-DD string is well-formed (even if the date is not today). */
+/** True when a string is a real calendar date in YYYY-MM-DD format. */
 export function isValidDateString(dateStr: unknown): dateStr is string {
-  return typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+  if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const date = parseDateLocal(dateStr);
+  return isValid(date) && format(date, 'yyyy-MM-dd') === dateStr;
 }
 
 /**

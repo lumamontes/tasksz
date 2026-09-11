@@ -56,6 +56,10 @@ No **SQL Editor** do projeto, execute uma vez o arquivo
 `tasks`, `subtasks`, `settings` e `profile`, configura as políticas de segurança
 por conta e ativa o realtime.
 
+Se as tabelas foram criadas com uma versão anterior do projeto, execute também
+[`supabase/migrate-camelcase.sql`](supabase/migrate-camelcase.sql) uma vez. Ele
+corrige os nomes das colunas e recria as políticas RLS.
+
 ### 3. Configurar as variáveis de ambiente
 
 Copie o arquivo de exemplo:
@@ -84,6 +88,10 @@ acessados em outros dispositivos.
 Por padrão, o Supabase exige confirmação por e-mail. Para permitir que uma conta
 seja ativada imediatamente durante o desenvolvimento, desative **Authentication
 → Sign In / Up → Confirm e-mail** no painel do Supabase.
+
+Em **Authentication → URL Configuration → Redirect URLs**, adicione a rota
+`https://SEU-DOMINIO/app/tarefas` para o retorno do login com Google. Em
+produção, substitua `SEU-DOMINIO` pelo domínio publicado.
 
 ### Segurança
 

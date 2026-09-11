@@ -14,7 +14,7 @@
  */
 
 import { $tasks, $subtasks } from '../../stores/tasksStore';
-import { $settings } from '../../stores/settingsStore';
+import { $settings, defaultSettings } from '../../stores/settingsStore';
 import { $user } from '../../stores/userStore';
 import { getRxDb } from './database';
 import type { Task, Subtask } from '../../types';
@@ -39,26 +39,31 @@ function nowIso(): string {
  */
 let currentAccountId = '';
 export function setCurrentAccount(accountId: string): void {
+  if (currentAccountId === accountId) return;
   currentAccountId = accountId;
+  // Do not leave the previous account's tasks visible during account changes.
+  $tasks.set([]);
+  $subtasks.set([]);
+  $settings.set(defaultSettings);
+  $user.set({ status: 'anonymous', profile: null });
 }
 export function getCurrentAccount(): string {
   return currentAccountId;
 }
 
 /**
- * Re-key every local row to a given account so guest-created data becomes
- * syncable. Used on sign-in so pre-account work is uploaded rather than
- * lost. No-op floor for settings/profile is fine: they are upserted by id.
+ * Re-key guest rows to a given account so pre-account work becomes syncable.
+ * Rows already assigned to an account must never be relabeled.
  */
 export async function rekeyToAccount(accountId: string): Promise<void> {
   setCurrentAccount(accountId);
   const db = await getRxDb();
 
   const [tasks, subtasks, settings, profiles] = await Promise.all([
-    db.tasks.find().exec(),
-    db.subtasks.find().exec(),
-    db.settings.find().exec(),
-    db.profile.find().exec(),
+    db.tasks.find({ selector: { accountId: '' } }).exec(),
+    db.subtasks.find({ selector: { accountId: '' } }).exec(),
+    db.settings.find({ selector: { accountId: '' } }).exec(),
+    db.profile.find({ selector: { accountId: '' } }).exec(),
   ]);
 
   await Promise.all([
@@ -206,19 +211,25 @@ export async function watchRxDbToAtoms(): Promise<() => void> {
   const subs: Array<{ unsubscribe(): void }> = [];
 
   subs.push(
-    db.tasks.find().$.subscribe((docs) => $tasks.set(docs.map(docToTask)))
+    db.tasks.find().$.subscribe((docs) =>
+      $tasks.set(docs.filter((doc) => doc.accountId === currentAccountId).map(docToTask))
+    )
   );
   subs.push(
-    db.subtasks.find().$.subscribe((docs) => $subtasks.set(docs.map(docToSubtask)))
+    db.subtasks.find().$.subscribe((docs) =>
+      $subtasks.set(docs.filter((doc) => doc.accountId === currentAccountId).map(docToSubtask))
+    )
   );
   subs.push(
-    db.settings.findOne().$.subscribe((doc) => {
-      if (doc) $settings.set(docToSettings(doc));
+    db.settings.find().$.subscribe((docs) => {
+      const doc = docs.find((item) => item.accountId === currentAccountId);
+      $settings.set(doc ? docToSettings(doc) : defaultSettings);
     })
   );
   subs.push(
-    db.profile.findOne().$.subscribe((doc) => {
-      if (doc) $user.set(docToProfile(doc));
+    db.profile.find().$.subscribe((docs) => {
+      const doc = docs.find((item) => item.accountId === currentAccountId);
+      $user.set(doc ? docToProfile(doc) : { status: 'anonymous', profile: null });
     })
   );
 
@@ -239,7 +250,7 @@ export async function rxInsertTask(task: Task): Promise<void> {
 
 export async function rxUpdateTask(id: string, updated: Task): Promise<void> {
   const db = await getRxDb();
-  const existing = await db.tasks.findOne({ selector: { id } }).exec();
+  const existing = await db.tasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
   const doc = {
     ...taskToDoc(updated),
     id,
@@ -252,7 +263,7 @@ export async function rxUpdateTask(id: string, updated: Task): Promise<void> {
 
 export async function rxRemoveTask(id: string): Promise<void> {
   const db = await getRxDb();
-  const doc = await db.tasks.findOne({ selector: { id } }).exec();
+  const doc = await db.tasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
   if (doc) await doc.remove();
 }
 
@@ -268,7 +279,7 @@ export async function rxInsertSubtask(subtask: Subtask): Promise<void> {
 
 export async function rxUpdateSubtask(id: string, updated: Subtask): Promise<void> {
   const db = await getRxDb();
-  const existing = await db.subtasks.findOne({ selector: { id } }).exec();
+  const existing = await db.subtasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
   const doc = {
     ...subtaskToDoc(updated),
     id,
@@ -281,13 +292,13 @@ export async function rxUpdateSubtask(id: string, updated: Subtask): Promise<voi
 
 export async function rxRemoveSubtask(id: string): Promise<void> {
   const db = await getRxDb();
-  const doc = await db.subtasks.findOne({ selector: { id } }).exec();
+  const doc = await db.subtasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
   if (doc) await doc.remove();
 }
 
 export async function rxSaveSettings(settings: SettingsState): Promise<void> {
   const db = await getRxDb();
-  const existing = await db.settings.findOne().exec();
+  const existing = await db.settings.findOne({ selector: { accountId: getCurrentAccount() } }).exec();
   await db.settings.upsert({
     id: existing?.id ?? 'default',
     ...settingsToDoc(settings),
@@ -299,7 +310,7 @@ export async function rxSaveSettings(settings: SettingsState): Promise<void> {
 
 export async function rxSaveProfile(user: UserState): Promise<void> {
   const db = await getRxDb();
-  const existing = await db.profile.findOne().exec();
+  const existing = await db.profile.findOne({ selector: { accountId: getCurrentAccount() } }).exec();
   await db.profile.upsert({
     id: existing?.id ?? 'default',
     ...profileToDoc(user),
