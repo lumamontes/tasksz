@@ -70,7 +70,7 @@ export interface ProfileDoc {
 }
 
 export const TASK_SCHEMA: RxJsonSchema<TaskDoc> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   properties: {

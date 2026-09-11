@@ -106,7 +106,15 @@ export function getRxDb(): Promise<RxDatabase<RxCollections>> {
     });
 
     await db.addCollections<RxCollections>({
-      tasks: { schema: TASK_SCHEMA },
+      tasks: {
+        schema: TASK_SCHEMA,
+        migrationStrategies: {
+          1: (oldDocument) => ({
+            ...oldDocument,
+            createdBy: (oldDocument.createdBy ?? oldDocument.accountId) || undefined,
+          }),
+        },
+      },
       subtasks: { schema: SUBTASK_SCHEMA },
       settings: { schema: SETTINGS_SCHEMA },
       profile: { schema: PROFILE_SCHEMA },
