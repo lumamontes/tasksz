@@ -47,17 +47,31 @@ function setPartial(partial: Partial<AuthState>): void {
 }
 
 async function applySession(session: AuthSession | null): Promise<void> {
-  if (session) {
+  if (!session) {
+    setCurrentAccount('');
+    setPartial({
+      userId: null,
+      email: null,
+      name: null,
+    });
+    return;
+  }
+
+  // Authentication must not depend on local database or sync startup. If
+  // Supabase replication is unavailable, the user should still appear logged
+  // in and be able to use the local app.
+  setPartial({
+    userId: session.userId,
+    email: session.email,
+    name: session.name,
+  });
+
+  try {
     await rekeyToAccount(session.userId);
     await startSyncForAccount(session.userId);
-  } else {
-    setCurrentAccount('');
+  } catch (error) {
+    console.error('Failed to start account synchronization:', error);
   }
-  setPartial({
-    userId: session?.userId ?? null,
-    email: session?.email ?? null,
-    name: session?.name ?? null,
-  });
 }
 
 /**
