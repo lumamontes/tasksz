@@ -318,25 +318,29 @@ export async function rxRemoveSubtask(id: string): Promise<void> {
 export async function rxSaveSettings(settings: SettingsState): Promise<void> {
   const db = await getRxDb();
   const existing = await db.settings.findOne({ selector: { accountId: getCurrentAccount() } }).exec();
+  const id = accountScopedId('settings');
   await db.settings.upsert({
-    id: existing?.id ?? accountScopedId('settings'),
+    id,
     ...settingsToDoc(settings),
     accountId: getCurrentAccount(),
     _modified: nowIso(),
     _deleted: false,
   });
+  if (existing && existing.id !== id) await existing.remove();
 }
 
 export async function rxSaveProfile(user: UserState): Promise<void> {
   const db = await getRxDb();
   const existing = await db.profile.findOne({ selector: { accountId: getCurrentAccount() } }).exec();
+  const id = accountScopedId('profile');
   await db.profile.upsert({
-    id: existing?.id ?? accountScopedId('profile'),
+    id,
     ...profileToDoc(user),
     accountId: getCurrentAccount(),
     _modified: nowIso(),
     _deleted: false,
   });
+  if (existing && existing.id !== id) await existing.remove();
 }
 
 // ---- Bulk operations (data backup import / full reset) --------------------
@@ -383,7 +387,7 @@ export async function rxImportBackup(data: BackupPayload): Promise<void> {
   }
   if (data.settings) {
     await db.settings.upsert({
-      id: 'default',
+      id: accountScopedId('settings'),
       ...settingsToDoc(data.settings),
       accountId: getCurrentAccount(),
       _modified: nowIso(),
@@ -439,7 +443,7 @@ export async function migrateLocalStorageToRxDb(): Promise<void> {
     }
     if (data.settings) {
       await db.settings.upsert({
-        id: 'default',
+        id: accountScopedId('settings'),
         ...settingsToDoc(data.settings),
         accountId: getCurrentAccount(),
         _modified: nowIso(),
@@ -448,7 +452,7 @@ export async function migrateLocalStorageToRxDb(): Promise<void> {
     }
     if (data.user?.profile?.name) {
       await db.profile.upsert({
-        id: 'default',
+        id: accountScopedId('profile'),
         name: String(data.user.profile.name),
         accountId: getCurrentAccount(),
         _modified: nowIso(),

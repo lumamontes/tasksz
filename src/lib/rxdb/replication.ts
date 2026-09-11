@@ -9,7 +9,11 @@
 
 import { getSupabase } from '../supabase';
 import { getRxDb, startReplication, type ReplicationHandle } from './database';
-import { recommendReload, setSyncError } from '../../stores/syncStore';
+import {
+  dismissReloadRecommendation,
+  recommendReload,
+  setSyncError,
+} from '../../stores/syncStore';
 
 let active: ReplicationHandle | null = null;
 
@@ -26,13 +30,22 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
     const db = await getRxDb();
     void db; // database must exist; watcher already running at boot
     active = await startReplication(supabase, accountId);
-    for (const state of [active.tasks, active.subtasks, active.settings, active.profile]) {
+    const states = [active.tasks, active.subtasks, active.settings, active.profile];
+    for (const state of states) {
       state.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
       state.error$.subscribe((err) => {
         const message = err?.message ?? '';
-        if (/400|column|schema|relation|not found/i.test(message)) recommendReload();
+        if (/column|schema|relation|migration|plugin|not found/i.test(message)) {
+          recommendReload();
+        }
       });
     }
+
+    // A successful initial sync proves that this client is compatible with the
+    // current remote schema, so do not keep showing a stale reload notice.
+    void Promise.all(states.map((state) => state.awaitInitialReplication()))
+      .then(() => dismissReloadRecommendation())
+      .catch(() => undefined);
   } catch (err) {
     setSyncError(err instanceof Error ? err.message : 'Não foi possível iniciar a sincronização.');
   }
