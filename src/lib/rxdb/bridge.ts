@@ -35,8 +35,8 @@ function toIsoDate(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-function accountScopedId(kind: 'settings' | 'profile'): string {
-  return `${getCurrentAccount() || 'guest'}:${kind}`;
+function accountScopedId(kind: 'settings' | 'profile', accountId = getCurrentAccount()): string {
+  return `${accountId || 'guest'}:${kind}`;
 }
 
 /**
@@ -75,6 +75,8 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
     db.profile.find({ selector: { accountId: '' } }).exec(),
   ]);
 
+  if (accountId !== getCurrentAccount()) return;
+
   await Promise.all([
     db.tasks.bulkUpsert(
       tasks.map((t) => ({ ...t.toJSON(), accountId, _modified: nowIso() }))
@@ -83,12 +85,14 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
       subtasks.map((s) => ({ ...s.toJSON(), accountId, _modified: nowIso() }))
     ),
     db.settings.bulkUpsert(
-      settings.map((s) => ({ ...s.toJSON(), id: accountScopedId('settings'), accountId, _modified: nowIso() }))
+      settings.map((s) => ({ ...s.toJSON(), id: accountScopedId('settings', accountId), accountId, _modified: nowIso() }))
     ),
     db.profile.bulkUpsert(
-      profiles.map((p) => ({ ...p.toJSON(), id: accountScopedId('profile'), accountId, _modified: nowIso() }))
+      profiles.map((p) => ({ ...p.toJSON(), id: accountScopedId('profile', accountId), accountId, _modified: nowIso() }))
     ),
   ]);
+
+  if (accountId !== getCurrentAccount()) return;
 
   await Promise.all([
     ...settings.map((setting) => setting.remove()),
