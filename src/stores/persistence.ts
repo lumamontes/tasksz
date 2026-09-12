@@ -15,8 +15,10 @@
 import { getRxDb } from '../lib/rxdb/database';
 import { migrateLocalStorageToRxDb, watchRxDbToAtoms } from '../lib/rxdb/bridge';
 import { recommendReload } from './syncStore';
+import { atom } from 'nanostores';
 
 let setupPromise: Promise<void> | null = null;
+export const $persistenceReady = atom(false);
 
 /**
  * Initialize the local-first database, migrate legacy data, and start the
@@ -31,9 +33,11 @@ export async function setupPersistence(): Promise<void> {
       await getRxDb();
       await migrateLocalStorageToRxDb();
       await watchRxDbToAtoms();
+      $persistenceReady.set(true);
     } catch (error) {
       console.error('Failed to initialize local-first storage:', error);
       if (/DB6|schema|migration/i.test(String(error))) recommendReload();
+      $persistenceReady.set(true);
       setupPromise = null;
     }
   })();

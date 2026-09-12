@@ -4,8 +4,9 @@
  * (The old name-onboarding redirect was removed — the app is guest-first.)
  */
 
-import { useEffect, useState } from 'react';
+import { useStore } from '@nanostores/react';
 import { useStoreInit } from '../../hooks/useStoreInit';
+import { $persistenceReady } from '../../stores/persistence';
 import { LoadingScreen } from '../ui/LoadingScreen';
 
 interface AppGuardProps {
@@ -13,16 +14,11 @@ interface AppGuardProps {
 }
 
 export function AppGuard({ children }: AppGuardProps) {
-  const [isChecking, setIsChecking] = useState(true);
+  const persistenceReady = useStore($persistenceReady);
 
   useStoreInit({ persistence: true, settings: true });
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => setIsChecking(false), 200);
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  if (isChecking) {
+  if (!persistenceReady) {
     return <LoadingScreen message="Carregando..." />;
   }
 
