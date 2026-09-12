@@ -25,6 +25,49 @@ export function DataSection() {
     custom: 'Personalizado',
   };
 
+  const isValidBackup = (data: unknown): data is {
+    tasks?: Task[];
+    subtasks?: Subtask[];
+    settings?: SettingsState;
+  } => {
+    if (!data || typeof data !== 'object') return false;
+    const backup = data as Record<string, unknown>;
+    if ('tasks' in backup && !Array.isArray(backup.tasks)) return false;
+    if ('subtasks' in backup && !Array.isArray(backup.subtasks)) return false;
+    if ('settings' in backup && backup.settings !== undefined &&
+      (!backup.settings || typeof backup.settings !== 'object')) return false;
+
+    const taskIds = new Set<string>();
+    for (const task of (Array.isArray(backup.tasks) ? backup.tasks : [])) {
+      if (!task || typeof task !== 'object') return false;
+      const candidate = task as Partial<Task>;
+      if (
+        typeof candidate.id !== 'string' ||
+        typeof candidate.title !== 'string' ||
+        !(typeof candidate.createdAt === 'string' || candidate.createdAt instanceof Date) ||
+        Number.isNaN(new Date(candidate.createdAt).getTime()) ||
+        typeof candidate.order !== 'number' ||
+        typeof candidate.archived !== 'boolean'
+      ) return false;
+      taskIds.add(candidate.id);
+    }
+
+    for (const subtask of (Array.isArray(backup.subtasks) ? backup.subtasks : [])) {
+      if (!subtask || typeof subtask !== 'object') return false;
+      const candidate = subtask as Partial<Subtask>;
+      if (
+        typeof candidate.id !== 'string' ||
+        typeof candidate.taskId !== 'string' ||
+        typeof candidate.title !== 'string' ||
+        typeof candidate.done !== 'boolean' ||
+        typeof candidate.order !== 'number' ||
+        !taskIds.has(candidate.taskId)
+      ) return false;
+    }
+
+    return true;
+  };
+
   const exportData = () => {
     const data = {
       version: 1,
@@ -59,11 +102,10 @@ export function DataSection() {
       try {
         const data = JSON.parse(e.target?.result as string);
 
-        // Basic validation
-        if (!data.tasks && !data.subtasks && !data.settings) {
-          alert('Arquivo de backup inválido. Verifique se o arquivo contém todos os dados necessários.');
-          return;
-        }
+         if (!isValidBackup(data) || (!data.tasks && !data.subtasks && !data.settings)) {
+           alert('Arquivo de backup inválido. Verifique se o arquivo contém dados válidos do Tarefitas.');
+           return;
+         }
 
         if (confirm('Isso irá substituir todos os seus dados atuais. Tem certeza que deseja continuar?')) {
           const tasks = Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
