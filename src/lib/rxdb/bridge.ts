@@ -54,6 +54,7 @@ export function setCurrentAccount(accountId: string): void {
   $subtasks.set([]);
   $settings.set(defaultSettings);
   $user.set({ status: 'anonymous', profile: null });
+  void refreshRxDbToAtoms(accountId);
 }
 export function getCurrentAccount(): string {
   return currentAccountId;
@@ -220,6 +221,40 @@ function docToProfile(doc: ProfileDoc): UserState {
 }
 
 // ---- Watch RxDB → atoms ---------------------------------------------------
+
+function applyDocsToAtoms(
+  tasks: TaskDoc[],
+  subtasks: SubtaskDoc[],
+  settings: SettingsDoc[],
+  profiles: ProfileDoc[],
+  accountId: string,
+): void {
+  // An account switch can happen while the database read is pending. Never
+  // let a refresh for the previous account repopulate the visible stores.
+  if (accountId !== currentAccountId) return;
+  $tasks.set(tasks.filter((doc) => doc.accountId === accountId).map(docToTask));
+  $subtasks.set(subtasks.filter((doc) => doc.accountId === accountId).map(docToSubtask));
+  const settingsDoc = settings.find((doc) => doc.accountId === accountId);
+  $settings.set(settingsDoc ? docToSettings(settingsDoc) : defaultSettings);
+  const profileDoc = profiles.find((doc) => doc.accountId === accountId);
+  $user.set(profileDoc ? docToProfile(profileDoc) : { status: 'anonymous', profile: null });
+}
+
+/** Refresh the atom facade after an account switch, even if RxDB emitted no change. */
+async function refreshRxDbToAtoms(accountId: string): Promise<void> {
+  try {
+    const db = await getRxDb();
+    const [tasks, subtasks, settings, profiles] = await Promise.all([
+      db.tasks.find().exec(),
+      db.subtasks.find().exec(),
+      db.settings.find().exec(),
+      db.profile.find().exec(),
+    ]);
+    applyDocsToAtoms(tasks, subtasks, settings, profiles, accountId);
+  } catch (error) {
+    console.error('Failed to refresh local-first stores:', error);
+  }
+}
 
 /**
  * Subscribe to every collection's RxDB query observable and push results into
