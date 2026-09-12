@@ -48,6 +48,7 @@ function setPartial(partial: Partial<AuthState>): void {
 
 async function applySession(session: AuthSession | null): Promise<void> {
   if (!session) {
+    await stopSync();
     setCurrentAccount('');
     setPartial({
       userId: null,
@@ -87,6 +88,25 @@ export function getAuthDisplayName(): string | null {
 }
 
 let authInitPromise: Promise<void> | null = null;
+let authListenerStarted = false;
+
+function startAuthListener(): void {
+  if (authListenerStarted) return;
+  const provider = getAuthProvider();
+  if (!provider.onAuthStateChange) return;
+
+  authListenerStarted = true;
+  provider.onAuthStateChange((session) => {
+    const currentUserId = $auth.get().userId;
+    if (session?.userId === currentUserId) {
+      setPartial({ email: session.email, name: session.name });
+      return;
+    }
+    void applySession(session).catch((error) => {
+      console.error('Failed to apply authentication change:', error);
+    });
+  });
+}
 
 /**
  * Restore the persisted session (logged-in user) for this browser.
@@ -108,6 +128,7 @@ async function runInitAuth(): Promise<void> {
   try {
     const session = await getAuthProvider().getSession();
     await applySession(session);
+    startAuthListener();
     setPartial({ isInitialized: true });
   } catch {
     setPartial({ isInitialized: true });

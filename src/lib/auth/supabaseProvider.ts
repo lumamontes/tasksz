@@ -37,6 +37,16 @@ class SupabaseAuthProvider implements AuthProvider {
     return toSession(data?.session ?? { user: null });
   }
 
+  onAuthStateChange(callback: (session: AuthSession | null) => void): () => void {
+    const supabase = getSupabase();
+    if (!supabase) return () => undefined;
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      callback(toSession(session ?? { user: null }));
+    });
+    return () => data.subscription.unsubscribe();
+  }
+
   async signUp(
     email: string,
     password: string,

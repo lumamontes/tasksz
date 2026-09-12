@@ -21,6 +21,9 @@ export interface AuthProvider {
   /** Restore a persisted session (if any) for this browser. */
   getSession(): Promise<AuthSession | null>;
 
+  /** Subscribe to session changes, when the provider supports live updates. */
+  onAuthStateChange?(callback: (session: AuthSession | null) => void): () => void;
+
   signUp(email: string, password: string): Promise<{
     session: AuthSession | null;
     requiresEmailConfirmation: boolean;
