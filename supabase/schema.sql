@@ -185,24 +185,15 @@ create policy "users can insert own tasks"
   with check (
     auth.uid()::text = account_id
     and created_by = auth.uid()::text
-    and (
-      project_id is null
-      or public.is_project_member(project_id, auth.uid()::text)
-      or public.is_project_owner(project_id, auth.uid()::text)
-    )
   );
 
 create policy "users can update own tasks"
   on public.tasks for update
   using (
     auth.uid()::text = account_id
-    or public.is_project_member(project_id, auth.uid()::text)
-    or public.is_project_owner(project_id, auth.uid()::text)
   )
   with check (
     auth.uid()::text = account_id
-    or public.is_project_member(project_id, auth.uid()::text)
-    or public.is_project_owner(project_id, auth.uid()::text)
   );
 
 -- ---------------------------------------------------------------------------
