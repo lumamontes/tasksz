@@ -98,12 +98,15 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
 
 // ---- Domain → doc mapping -------------------------------------------------
 
-function taskToDoc(task: Task): Omit<TaskDoc, 'accountId' | '_modified' | '_deleted'> {
+function taskToDoc(
+  task: Task,
+  accountId = getCurrentAccount(),
+): Omit<TaskDoc, 'accountId' | '_modified' | '_deleted'> {
   return {
     id: task.id,
-    createdBy: (task.createdBy ?? getCurrentAccount()) || undefined,
+    createdBy: (task.createdBy ?? accountId) || undefined,
     projectId: task.projectId,
-    assigneeId: (task.assigneeId ?? getCurrentAccount()) || undefined,
+    assigneeId: (task.assigneeId ?? accountId) || undefined,
     title: task.title,
     description: task.description ?? '',
     createdAt: toIsoDate(task.createdAt),
@@ -293,22 +296,26 @@ export async function watchRxDbToAtoms(): Promise<() => void> {
 // ---- CRUD helpers (used by store actions) ---------------------------------
 
 export async function rxInsertTask(task: Task): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
+  if (accountId !== getCurrentAccount()) return;
   await db.tasks.upsert({
-    ...taskToDoc(task),
-    accountId: getCurrentAccount(),
+    ...taskToDoc(task, accountId),
+    accountId,
     _modified: nowIso(),
     _deleted: false,
   });
 }
 
 export async function rxUpdateTask(id: string, updated: Task): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
-  const existing = await db.tasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
+  const existing = await db.tasks.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
   const doc = {
-    ...taskToDoc(updated),
+    ...taskToDoc(updated, accountId),
     id,
-    accountId: getCurrentAccount(),
+    accountId,
     _modified: nowIso(),
     _deleted: existing?._deleted ?? false,
   };
@@ -316,28 +323,34 @@ export async function rxUpdateTask(id: string, updated: Task): Promise<void> {
 }
 
 export async function rxRemoveTask(id: string): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
-  const doc = await db.tasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
+  const doc = await db.tasks.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
   if (doc) await doc.remove();
 }
 
 export async function rxInsertSubtask(subtask: Subtask): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
+  if (accountId !== getCurrentAccount()) return;
   await db.subtasks.upsert({
     ...subtaskToDoc(subtask),
-    accountId: getCurrentAccount(),
+    accountId,
     _modified: nowIso(),
     _deleted: false,
   });
 }
 
 export async function rxUpdateSubtask(id: string, updated: Subtask): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
-  const existing = await db.subtasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
+  const existing = await db.subtasks.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
   const doc = {
     ...subtaskToDoc(updated),
     id,
-    accountId: getCurrentAccount(),
+    accountId,
     _modified: nowIso(),
     _deleted: existing?._deleted ?? false,
   };
@@ -345,8 +358,10 @@ export async function rxUpdateSubtask(id: string, updated: Subtask): Promise<voi
 }
 
 export async function rxRemoveSubtask(id: string): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
-  const doc = await db.subtasks.findOne({ selector: { id, accountId: getCurrentAccount() } }).exec();
+  const doc = await db.subtasks.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
   if (doc) await doc.remove();
 }
 
