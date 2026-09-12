@@ -95,9 +95,14 @@ export function DataSection() {
     await rxClearAllData();
     resetSettings();
 
-    // Clear legacy localStorage layers (pomodoro state, migration blob…)
+    // Clear app-owned legacy state without removing the Supabase session.
     try {
-      localStorage.clear();
+      [
+        'tarefitas_v1_miniTimer',
+        'tarefitas_v1_pomodoro',
+        'tarefitas_v1_data',
+        'tarefitas_overwhelm_mode',
+      ].forEach((key) => localStorage.removeItem(key));
     } catch {
       // best-effort
     }

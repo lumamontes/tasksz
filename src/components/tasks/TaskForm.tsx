@@ -75,8 +75,8 @@ export function TaskForm() {
       }
 
       // Attach subtasks only after the parent task exists locally.
-      newSubtasks.forEach((subtaskTitle) => {
-        if (subtaskTitle.trim()) addSubtask(newTaskId, subtaskTitle.trim());
+      newSubtasks.forEach((subtaskTitle, index) => {
+        if (subtaskTitle.trim()) addSubtask(newTaskId, subtaskTitle.trim(), index);
       });
       selectTask(newTaskId);
     }

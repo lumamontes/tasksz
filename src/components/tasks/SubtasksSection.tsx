@@ -106,9 +106,10 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
       'Finalizar'
     ];
     
+    const firstOrder = subtasks.length;
     for (let i = 0; i < count; i++) {
       const title = stepTemplates[i] || `Passo ${i + 1}`;
-      addSubtask(task.id, title);
+      addSubtask(task.id, title, firstOrder + i);
     }
   };
 

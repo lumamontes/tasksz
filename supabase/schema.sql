@@ -82,6 +82,18 @@ begin
 end;
 $$;
 
+create or replace function public.prevent_task_account_change()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'UPDATE' and new.account_id <> old.account_id then
+    raise exception 'task account_id cannot be changed';
+  end if;
+  return new;
+end;
+$$;
+
 drop policy if exists "project members can read projects" on public.projects;
 create policy "project members can read projects"
   on public.projects for select
@@ -189,11 +201,8 @@ create policy "users can update own tasks"
   )
   with check (
     auth.uid()::text = account_id
-    and (
-      project_id is null
-      or public.is_project_member(project_id, auth.uid()::text)
-      or public.is_project_owner(project_id, auth.uid()::text)
-    )
+    or public.is_project_member(project_id, auth.uid()::text)
+    or public.is_project_owner(project_id, auth.uid()::text)
   );
 
 -- ---------------------------------------------------------------------------
@@ -347,6 +356,11 @@ begin
       execute function public.set_modified_timestamp()
     $x$, t, t);
   end loop;
+
+  drop trigger if exists prevent_task_account_change on public.tasks;
+  create trigger prevent_task_account_change
+    before update on public.tasks
+    for each row execute function public.prevent_task_account_change();
 end
 $$;
 

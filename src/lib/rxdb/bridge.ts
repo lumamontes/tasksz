@@ -330,6 +330,13 @@ export async function rxRemoveTask(id: string): Promise<void> {
   if (doc) await doc.remove();
 }
 
+export async function rxRemoveSubtasksForTask(taskId: string): Promise<void> {
+  const accountId = getCurrentAccount();
+  const db = await getRxDb();
+  if (accountId !== getCurrentAccount()) return;
+  await db.subtasks.find({ selector: { accountId, taskId } }).remove();
+}
+
 export async function rxInsertSubtask(subtask: Subtask): Promise<void> {
   const accountId = getCurrentAccount();
   const db = await getRxDb();
@@ -406,20 +413,23 @@ export interface BackupPayload {
  * The existing docs are removed first so the imported data fully takes over.
  */
 export async function rxImportBackup(data: BackupPayload): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
+  if (accountId !== getCurrentAccount()) return;
 
   await Promise.all([
-    db.tasks.find().remove(),
-    db.subtasks.find().remove(),
-    db.settings.find().remove(),
-    db.profile.find().remove(),
+    db.tasks.find({ selector: { accountId } }).remove(),
+    db.subtasks.find({ selector: { accountId } }).remove(),
+    db.settings.find({ selector: { accountId } }).remove(),
+    db.profile.find({ selector: { accountId } }).remove(),
   ]);
+  if (accountId !== getCurrentAccount()) return;
 
   if (data.tasks?.length) {
     await db.tasks.bulkUpsert(
       data.tasks.map((t) => ({
-        ...taskToDoc(t),
-        accountId: getCurrentAccount(),
+        ...taskToDoc(t, accountId),
+        accountId,
         _modified: nowIso(),
         _deleted: false,
       })),
@@ -429,7 +439,7 @@ export async function rxImportBackup(data: BackupPayload): Promise<void> {
     await db.subtasks.bulkUpsert(
       data.subtasks.map((s) => ({
         ...subtaskToDoc(s),
-        accountId: getCurrentAccount(),
+        accountId,
         _modified: nowIso(),
         _deleted: false,
       })),
@@ -437,9 +447,9 @@ export async function rxImportBackup(data: BackupPayload): Promise<void> {
   }
   if (data.settings) {
     await db.settings.upsert({
-      id: accountScopedId('settings'),
+      id: `${accountId || 'guest'}:settings`,
       ...settingsToDoc(data.settings),
-      accountId: getCurrentAccount(),
+      accountId,
       _modified: nowIso(),
       _deleted: false,
     });
@@ -450,12 +460,13 @@ export async function rxImportBackup(data: BackupPayload): Promise<void> {
  * Remove every document from all collections (used by "apagar todos os dados").
  */
 export async function rxClearAllData(): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
   await Promise.all([
-    db.tasks.find().remove(),
-    db.subtasks.find().remove(),
-    db.settings.find().remove(),
-    db.profile.find().remove(),
+    db.tasks.find({ selector: { accountId } }).remove(),
+    db.subtasks.find({ selector: { accountId } }).remove(),
+    db.settings.find({ selector: { accountId } }).remove(),
+    db.profile.find({ selector: { accountId } }).remove(),
   ]);
 }
 

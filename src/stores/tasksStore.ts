@@ -19,6 +19,7 @@ import {
   rxInsertSubtask,
   rxUpdateSubtask,
   rxRemoveSubtask,
+  rxRemoveSubtasksForTask,
 } from '../lib/rxdb/bridge';
 
 // Core state atoms
@@ -163,7 +164,7 @@ export function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'creat
 }
 
 export function deleteTask(id: string) {
-  void rxRemoveTask(id);
+  void Promise.all([rxRemoveTask(id), rxRemoveSubtasksForTask(id)]);
   
   // Clear selection if deleted task was selected
   if ($selectedTaskId.get() === id) {
@@ -210,7 +211,7 @@ export function reorderTasks(reorderedTasks: Task[]) {
 }
 
 // Subtask actions
-export function addSubtask(taskId: string, title: string) {
+export function addSubtask(taskId: string, title: string, order?: number) {
   const subtasks = $subtasks.get();
   const existingSubtasks = subtasks.filter(s => s.taskId === taskId);
   
@@ -219,7 +220,7 @@ export function addSubtask(taskId: string, title: string) {
     taskId,
     title,
     done: false,
-    order: existingSubtasks.length,
+    order: order ?? existingSubtasks.length,
     updatedAt: new Date()
   };
   
