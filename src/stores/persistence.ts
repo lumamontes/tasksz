@@ -16,7 +16,7 @@ import { getRxDb } from '../lib/rxdb/database';
 import { migrateLocalStorageToRxDb, watchRxDbToAtoms } from '../lib/rxdb/bridge';
 import { recommendReload } from './syncStore';
 
-let isSetup = false;
+let setupPromise: Promise<void> | null = null;
 
 /**
  * Initialize the local-first database, migrate legacy data, and start the
@@ -24,17 +24,21 @@ let isSetup = false;
  */
 export async function setupPersistence(): Promise<void> {
   if (typeof window === 'undefined') return;
-  if (isSetup) return;
-  isSetup = true;
+  if (setupPromise) return setupPromise;
 
-  try {
-    await getRxDb();
-    await migrateLocalStorageToRxDb();
-    await watchRxDbToAtoms();
-  } catch (error) {
-    console.error('Failed to initialize local-first storage:', error);
-    if (/DB6|schema|migration/i.test(String(error))) recommendReload();
-  }
+  setupPromise = (async () => {
+    try {
+      await getRxDb();
+      await migrateLocalStorageToRxDb();
+      await watchRxDbToAtoms();
+    } catch (error) {
+      console.error('Failed to initialize local-first storage:', error);
+      if (/DB6|schema|migration/i.test(String(error))) recommendReload();
+      setupPromise = null;
+    }
+  })();
+
+  return setupPromise;
 }
 
 // Keep the exported surface the app historically had. These are no-ops for
