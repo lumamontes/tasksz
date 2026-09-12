@@ -47,7 +47,7 @@ export function TaskForm() {
     }
   }, [editingTask]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -66,8 +66,15 @@ export function TaskForm() {
     if (editingTask) {
       updateTask(editingTask.id, data);
     } else {
-      const newTaskId = addTask(data);
-      // Attach subtasks entered at creation time.
+      let newTaskId: string;
+      try {
+        newTaskId = await addTask(data);
+      } catch {
+        setError('Não foi possível criar a tarefa. Tente novamente.');
+        return;
+      }
+
+      // Attach subtasks only after the parent task exists locally.
       newSubtasks.forEach((subtaskTitle) => {
         if (subtaskTitle.trim()) addSubtask(newTaskId, subtaskTitle.trim());
       });

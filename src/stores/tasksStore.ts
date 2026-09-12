@@ -138,7 +138,7 @@ export function setSelectedDay(dateStr: string) {
 }
 
 // Action functions
-export function addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) {
+export async function addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>): Promise<string> {
   const tasks = $tasks.get();
   const newTask: Task = {
     ...task,
@@ -148,7 +148,7 @@ export function addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'ord
     order: tasks.length
   };
   
-  void rxInsertTask(newTask);
+  await rxInsertTask(newTask);
   trackEvent('task_created', { hasDate: Boolean(task.scheduledDate) });
   return newTask.id;
 }
