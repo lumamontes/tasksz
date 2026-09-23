@@ -26,7 +26,10 @@ export interface TaskDoc {
   createdAt: string; // ISO-8601
   order: number;
   archived: boolean;
+  completed?: boolean;
   scheduledDate?: string; // YYYY-MM-DD
+  startDate?: string;
+  endDate?: string;
   recurring?: string | null; // JSON string of recurring config
   _modified: string;
   _deleted: boolean;
@@ -40,6 +43,32 @@ export interface SubtaskDoc {
   description?: string;
   done: boolean;
   order: number;
+  _modified: string;
+  _deleted: boolean;
+}
+
+export interface AreaDoc {
+  id: string;
+  accountId: string;
+  name: string;
+  description?: string;
+  color?: string;
+  order: number;
+  createdAt: string;
+  _modified: string;
+  _deleted: boolean;
+}
+
+export interface ProjectDoc {
+  id: string;
+  accountId: string;
+  areaId?: string;
+  ownerId?: string;
+  createdBy?: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt?: string;
   _modified: string;
   _deleted: boolean;
 }
@@ -70,7 +99,7 @@ export interface ProfileDoc {
 }
 
 export const TASK_SCHEMA: RxJsonSchema<TaskDoc> = {
-  version: 1,
+  version: 3,
   primaryKey: 'id',
   type: 'object',
   properties: {
@@ -84,12 +113,55 @@ export const TASK_SCHEMA: RxJsonSchema<TaskDoc> = {
     createdAt: { type: 'string' },
     order: { type: 'number' },
     archived: { type: 'boolean' },
+    completed: { type: 'boolean' },
     scheduledDate: { type: 'string' },
+    startDate: { type: 'string' },
+    endDate: { type: 'string' },
     recurring: { type: ['string', 'null'] },
     _modified: { type: 'string' },
     _deleted: { type: 'boolean' },
   },
   required: ['id', 'accountId', 'title', 'createdAt', 'order', 'archived', '_modified', '_deleted'],
+  indexes: ['accountId'],
+};
+
+export const AREA_SCHEMA: RxJsonSchema<AreaDoc> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  properties: {
+    id: { type: 'string', maxLength: 200 },
+    accountId: { type: 'string' },
+    name: { type: 'string' },
+    description: { type: 'string' },
+    color: { type: 'string' },
+    order: { type: 'number' },
+    createdAt: { type: 'string' },
+    _modified: { type: 'string' },
+    _deleted: { type: 'boolean' },
+  },
+  required: ['id', 'accountId', 'name', 'order', 'createdAt', '_modified', '_deleted'],
+  indexes: ['accountId'],
+};
+
+export const PROJECT_SCHEMA: RxJsonSchema<ProjectDoc> = {
+  version: 1,
+  primaryKey: 'id',
+  type: 'object',
+  properties: {
+    id: { type: 'string', maxLength: 200 },
+    accountId: { type: 'string' },
+    areaId: { type: 'string' },
+    ownerId: { type: 'string' },
+    createdBy: { type: 'string' },
+    name: { type: 'string' },
+    description: { type: 'string' },
+    createdAt: { type: 'string' },
+    updatedAt: { type: 'string' },
+    _modified: { type: 'string' },
+    _deleted: { type: 'boolean' },
+  },
+  required: ['id', 'accountId', 'name', 'createdAt', '_modified', '_deleted'],
   indexes: ['accountId'],
 };
 

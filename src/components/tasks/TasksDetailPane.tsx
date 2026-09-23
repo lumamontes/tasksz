@@ -33,7 +33,7 @@ export function TasksDetailPane() {
   }
 
   return (
-    <div className="h-full min-w-0 bg-theme-panel">
+    <div className="h-full min-h-0 min-w-0 overflow-hidden bg-theme-panel">
       <ErrorBoundary>
         <Suspense
           fallback={

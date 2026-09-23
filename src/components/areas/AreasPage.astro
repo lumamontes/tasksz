@@ -1,0 +1,9 @@
+---
+import { AreasController } from './AreasController';
+---
+
+<section data-section="areas" class="h-full overflow-y-auto bg-theme-panel" aria-labelledby="areas-title">
+  <div class="mx-auto flex h-full max-w-6xl flex-col p-6 lg:p-8">
+    <AreasController client:only="react" />
+  </div>
+</section>

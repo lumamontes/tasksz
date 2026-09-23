@@ -12,6 +12,7 @@ import { CelebrationHost } from '../celebration/CelebrationHost';
 import { FloatingPomodoro } from '../pomodoro/FloatingPomodoro';
 import { AuthModal } from '../auth/AuthModal';
 import { SyncReloadNotice } from '../sync/SyncReloadNotice';
+import AreasPage from '../areas/AreasPage.astro';
 ---
 
 <div id="app-shell" class="flex h-screen bg-theme-bg font-sans text-theme-text overflow-hidden">
@@ -50,6 +51,7 @@ import { SyncReloadNotice } from '../sync/SyncReloadNotice';
     <!-- Dynamic content based on current section -->
     <div id="main-content-area" class="h-full">
       <TasksArea />
+      <AreasPage />
       <SettingsPage client:visible />
     </div>
   </main>
@@ -69,17 +71,18 @@ import { SyncReloadNotice } from '../sync/SyncReloadNotice';
   import { initStores } from '../../utils/initStores';
   import { $currentSection, $settings, applyTheme, applyFont } from '../../stores/settingsStore';
   import { $sidebarCollapsed, loadSidebarCollapsed } from '../../stores/layoutStore';
+  import { setSyncError } from '../../stores/syncStore';
   
-  // Initialize stores on page load
-  initStores();
+  // A falha de inicialização fica disponível para o indicador de sincronização.
+  initStores().catch((error) => {
+    setSyncError(error instanceof Error ? error.message : 'Não foi possível inicializar o armazenamento local.');
+  });
   loadSidebarCollapsed();
   
   // Apply initial theme and font
   const settings = $settings.get();
   applyTheme(settings);
   applyFont(settings);
-  
-  const appShell = document.getElementById('app-shell');
   
   // Apply density classes to root
   const updateDensity = () => {
@@ -100,7 +103,7 @@ import { SyncReloadNotice } from '../sync/SyncReloadNotice';
   // Show/hide sections based on current section
   const updateMainContent = () => {
     const section = $currentSection.get();
-    const sections = ['tasks', 'configuracoes'];
+    const sections = ['tasks', 'areas', 'configuracoes'];
     
     sections.forEach(sectionId => {
       const el = document.querySelector(`[data-section="${sectionId}"]`) as HTMLElement;
@@ -133,8 +136,9 @@ import { SyncReloadNotice } from '../sync/SyncReloadNotice';
   // Initial updates
   updateDensity();
   updateSidebarCollapsed();
+  updateMainContent();
   
-  // Initial section update after a short delay to allow React hydration
+  // Retry only when an island has not rendered its section marker yet.
   setTimeout(checkAndUpdate, 200);
 </script>
 
@@ -147,5 +151,16 @@ import { SyncReloadNotice } from '../sync/SyncReloadNotice';
   /* Hide sections by default, React components will handle visibility */
   [data-section] {
     height: 100%;
+  }
+
+  /* Tasks is the default route; prevent other islands from flashing before the
+     client section controller applies the current section. */
+</style>
+
+<style is:global>
+  [data-section="areas"],
+  [data-section="configuracoes"] {
+    display: none;
+    visibility: hidden;
   }
 </style>

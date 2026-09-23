@@ -21,6 +21,7 @@ import {
   rxRemoveSubtask,
   rxRemoveSubtasksForTask,
 } from '../lib/rxdb/bridge';
+import { isTaskCompletedValue } from '../domain/tasks/completion';
 
 // Core state atoms
 export const $tasks = atom<Task[]>([]);
@@ -66,9 +67,20 @@ export function getTaskProgress(taskId: string) {
   return { completed, total, percentage };
 }
 
+/** Keeps legacy tasks compatible while giving new tasks an explicit state. */
+export function isTaskCompleted(taskId: string, task?: Task, subtasks = $subtasks.get()): boolean {
+  return isTaskCompletedValue(task, subtasks.filter((subtask) => subtask.taskId === taskId));
+}
+
 // Whether a task belongs to a given day (scheduled date or recurring match)
 function matchesDay(task: Task, dateStr: string): boolean {
   if (task.scheduledDate === dateStr) return true;
+
+  if (task.startDate || task.endDate) {
+    const start = task.startDate || task.endDate;
+    const end = task.endDate || task.startDate;
+    if (start && end && dateStr >= start && dateStr <= end) return true;
+  }
 
   if (task.recurring) {
     if (task.recurring.type === 'daily') return true;
@@ -97,20 +109,18 @@ export const $filteredTasks = computed(
       if (matchesDay(task, selectedDay)) return true;
       // Unscheduled tasks are a rolling backlog: they stay visible on any day
       // (e.g. tasks created without a date reappear on the next day).
-      return !task.scheduledDate && !task.recurring;
+      return !task.scheduledDate && !task.startDate && !task.endDate && !task.recurring;
     });
 
     let result: Task[];
     if (filter === 'in-progress') {
       // Everything that isn't fully completed (no-subtask tasks count as active)
       result = dayTasks.filter((task) => {
-        const taskSubtasks = subtasks.filter((s) => s.taskId === task.id);
-        return !(taskSubtasks.length > 0 && taskSubtasks.every((s) => s.done));
+        return !isTaskCompleted(task.id, task, subtasks);
       });
     } else if (filter === 'completed') {
       result = dayTasks.filter((task) => {
-        const taskSubtasks = subtasks.filter((s) => s.taskId === task.id);
-        return taskSubtasks.length > 0 && taskSubtasks.every((s) => s.done);
+        return isTaskCompleted(task.id, task, subtasks);
       });
     } else {
       result = dayTasks;
@@ -263,6 +273,22 @@ export function toggleSubtaskDone(id: string) {
   }
 }
 
+/** Completes the task as a whole and keeps its subtasks visually consistent. */
+export function toggleTaskCompleted(taskId: string) {
+  const task = $tasks.get().find((item) => item.id === taskId);
+  if (!task) return;
+
+  const nextCompleted = !isTaskCompleted(taskId, task);
+  updateTask(taskId, { completed: nextCompleted });
+
+  const subtasks = $subtasks.get().filter((subtask) => subtask.taskId === taskId);
+  for (const subtask of subtasks) {
+    if (subtask.done !== nextCompleted) {
+      void rxUpdateSubtask(subtask.id, { ...subtask, done: nextCompleted, updatedAt: new Date() });
+    }
+  }
+}
+
 export function reorderSubtasks(taskId: string, reorderedSubtasks: Subtask[]) {
   for (let index = 0; index < reorderedSubtasks.length; index++) {
     const subtask = reorderedSubtasks[index];
@@ -290,6 +316,10 @@ export function getTasksForDate(dateStr: string): Task[] {
     if (task.scheduledDate === dateStr) {
       return true;
     }
+
+    const rangeStart = task.startDate || task.endDate;
+    const rangeEnd = task.endDate || task.startDate;
+    if (rangeStart && rangeEnd && dateStr >= rangeStart && dateStr <= rangeEnd) return true;
     
     // Check if task is recurring and matches this date
     if (task.recurring) {

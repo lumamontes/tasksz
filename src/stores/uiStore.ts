@@ -9,6 +9,9 @@ export type TaskFormState = { mode: 'new'; scheduledDate?: string } | { mode: 'e
 
 export const $taskForm = atom<TaskFormState | null>(null);
 
+export type TaskOrganizationNavigation = { areaId?: string; projectId?: string };
+export const $taskOrganizationNavigation = atom<TaskOrganizationNavigation | null>(null);
+
 export function openNewTask(options?: { scheduledDate?: string }) {
   $taskForm.set({ mode: 'new', scheduledDate: options?.scheduledDate });
 }
@@ -19,4 +22,8 @@ export function openEditTask(taskId: string) {
 
 export function closeTaskForm() {
   $taskForm.set(null);
+}
+
+export function openTaskOrganization(navigation: TaskOrganizationNavigation) {
+  $taskOrganizationNavigation.set(navigation);
 }

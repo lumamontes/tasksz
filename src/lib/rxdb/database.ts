@@ -21,22 +21,30 @@ import {
   SUBTASK_SCHEMA,
   SETTINGS_SCHEMA,
   PROFILE_SCHEMA,
+  AREA_SCHEMA,
+  PROJECT_SCHEMA,
   type TaskDoc as TaskDocType,
   type SubtaskDoc as SubtaskDocType,
   type SettingsDoc as SettingsDocType,
   type ProfileDoc as ProfileDocType,
+  type AreaDoc as AreaDocType,
+  type ProjectDoc as ProjectDocType,
 } from './schema';
 
 export type TaskDoc = TaskDocType;
 export type SubtaskDoc = SubtaskDocType;
 export type SettingsDoc = SettingsDocType;
 export type ProfileDoc = ProfileDocType;
+export type AreaDoc = AreaDocType;
+export type ProjectDoc = ProjectDocType;
 
 export interface RxCollections {
   tasks: RxCollection<TaskDoc>;
   subtasks: RxCollection<SubtaskDoc>;
   settings: RxCollection<SettingsDoc>;
   profile: RxCollection<ProfileDoc>;
+  areas: RxCollection<AreaDoc>;
+  projects: RxCollection<ProjectDoc>;
 }
 
 /**
@@ -48,6 +56,8 @@ export interface ReplicationHandle {
   subtasks: RxSupabaseReplicationState<SubtaskDoc>;
   settings: RxSupabaseReplicationState<SettingsDoc>;
   profile: RxSupabaseReplicationState<ProfileDoc>;
+  areas: RxSupabaseReplicationState<AreaDoc>;
+  projects: RxSupabaseReplicationState<ProjectDoc>;
 }
 
 const FIELD_NAMES = [
@@ -55,9 +65,14 @@ const FIELD_NAMES = [
   ['createdBy', 'created_by'],
   ['projectId', 'project_id'],
   ['assigneeId', 'assignee_id'],
+  ['areaId', 'area_id'],
+  ['ownerId', 'owner_id'],
+  ['updatedAt', 'updated_at'],
   ['createdAt', 'created_at'],
   ['order', 'sort_order'],
   ['scheduledDate', 'scheduled_date'],
+  ['startDate', 'start_date'],
+  ['endDate', 'end_date'],
   ['taskId', 'task_id'],
   ['themeId', 'theme_id'],
   ['customPalette', 'custom_palette'],
@@ -127,11 +142,24 @@ export function getRxDb(): Promise<RxDatabase<RxCollections>> {
             ...oldDocument,
             createdBy: (oldDocument.createdBy ?? oldDocument.accountId) || undefined,
           }),
+          2: (oldDocument) => ({ ...oldDocument }),
+          3: (oldDocument) => {
+            const migratedDocument = { ...oldDocument };
+            delete migratedDocument.areaId;
+            return migratedDocument;
+          },
         },
       },
       subtasks: { schema: SUBTASK_SCHEMA },
       settings: { schema: SETTINGS_SCHEMA },
       profile: { schema: PROFILE_SCHEMA },
+      areas: { schema: AREA_SCHEMA },
+      projects: {
+        schema: PROJECT_SCHEMA,
+        migrationStrategies: {
+          1: (oldDocument) => ({ ...oldDocument, areaId: oldDocument.areaId || undefined }),
+        },
+      },
     });
 
     cachedDb = db;
@@ -190,6 +218,31 @@ export async function startReplication(
     collection: db.profile,
     ...replicationOptions,
   });
+  const areas = replicateSupabase<AreaDoc>({
+    replicationIdentifier: `${baseId}-areas`,
+    tableName: 'areas',
+    collection: db.areas,
+    ...replicationOptions,
+  });
+  const projects = replicateSupabase<ProjectDoc>({
+    replicationIdentifier: `${baseId}-projects`,
+    tableName: 'projects',
+    collection: db.projects,
+    ...replicationOptions,
+    pull: {
+      batchSize: 100,
+      queryBuilder: ({ query }: { query: any }) => query.eq('owner_id', accountId),
+      modifier: (document: ProjectDoc) => ({ ...toLocalDocument(document), accountId }),
+    },
+    push: {
+      batchSize: 100,
+      modifier: (document: ProjectDoc) => {
+        const mapped = toServerDocument(document) as unknown as Record<string, unknown>;
+        delete mapped.account_id;
+        return mapped as unknown as ProjectDoc;
+      },
+    },
+  });
 
-  return { tasks, subtasks, settings, profile };
+  return { tasks, subtasks, settings, profile, areas, projects };
 }

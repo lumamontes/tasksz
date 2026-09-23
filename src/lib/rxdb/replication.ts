@@ -62,7 +62,7 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
     const db = await getRxDb();
     void db; // database must exist; watcher already running at boot
     active = await startReplication(supabase, accountId);
-    const states = [active.tasks, active.subtasks, active.settings, active.profile];
+    const states = [active.tasks, active.subtasks, active.settings, active.profile, active.areas, active.projects];
     for (const state of states) {
       state.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
       state.error$.subscribe((err) => {
@@ -97,6 +97,8 @@ export async function stopSync(): Promise<void> {
     active.subtasks.cancel(),
     active.settings.cancel(),
     active.profile.cancel(),
+    active.areas.cancel(),
+    active.projects.cancel(),
   ]);
   active = null;
 }

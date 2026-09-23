@@ -1,84 +1,92 @@
-/**
- * TaskForm Component
- * Store-driven form island: opens via $taskForm (new task or edit),
- * prefills the date from the selected day when browsing another day.
- *
- * Extra fields (description + subtasks) sit behind a collapsible "Mais
- * detalhes" accordion so the basic task stays quick to create. When creating
- * a new task, subtasks entered here are added right after the task exists.
- */
-
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
+import { Controller, useForm } from 'react-hook-form';
 import type { Task } from '../../types';
+import { taskDraftSchema, type TaskDraft } from '../../domain/tasks/schemas';
 import { Button } from '../ui/Button';
 import { $tasks, addTask, updateTask, selectTask, addSubtask } from '../../stores/tasksStore';
+import { $projects } from '../../stores/projectsStore';
 import { $taskForm, closeTaskForm } from '../../stores/uiStore';
 import { addDays, formatDateLocal, getTodayString } from '../../utils/dateUtils';
 import { TaskDatePicker } from './TaskDatePicker';
+import { TaskOrganizationFields } from './TaskOrganizationFields';
 import { ChevronDown, Plus, X } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 export function TaskForm() {
-  const form = useStore($taskForm);
+  const taskForm = useStore($taskForm);
   const tasks = useStore($tasks);
+  const projects = useStore($projects);
 
   const editingTask =
-    form?.mode === 'edit' ? tasks.find((t) => t.id === form.taskId) : undefined;
+    taskForm?.mode === 'edit' ? tasks.find((t) => t.id === taskForm.taskId) : undefined;
+  const editingAreaId = editingTask?.projectId ? projects.find((project) => project.id === editingTask.projectId)?.areaId : undefined;
 
-  const [title, setTitle] = useState('');
-  const [scheduledDate, setScheduledDate] = useState<string | undefined>(() =>
-    form?.mode === 'new' ? form.scheduledDate : undefined
-  );
-  const [description, setDescription] = useState('');
+  const form = useForm<TaskDraft>({
+    resolver: zodResolver(taskDraftSchema),
+    defaultValues: { title: '', description: '', scheduledDate: taskForm?.mode === 'new' ? taskForm.scheduledDate : undefined },
+  });
+  const scheduledDate = form.watch('scheduledDate');
   const [error, setError] = useState('');
+  const [organizationAreaId, setOrganizationAreaId] = useState<string | undefined>(undefined);
+  const validationError = error || form.formState.errors.title?.message || form.formState.errors.endDate?.message;
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
   const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
   const [subtaskInput, setSubtaskInput] = useState('');
   const subtaskInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize form with task data when editing
+  // A identidade da tarefa define o limite para reiniciar o rascunho.
   useEffect(() => {
     if (editingTask) {
-      setTitle(editingTask.title);
-      setScheduledDate(editingTask.scheduledDate || undefined);
-      setDescription(editingTask.description || '');
-      setNewSubtasks([]);
+       form.reset({
+         title: editingTask.title,
+         scheduledDate: editingTask.scheduledDate || undefined,
+         startDate: editingTask.startDate || undefined,
+         endDate: editingTask.endDate || undefined,
+         description: editingTask.description || '',
+          projectId: editingTask.projectId,
+        });
+        setOrganizationAreaId(editingAreaId);
+       setNewSubtasks([]);
+    } else if (taskForm?.mode === 'new') {
+      form.reset({ title: '', description: '', scheduledDate: taskForm.scheduledDate });
+      setOrganizationAreaId(undefined);
     }
-  }, [editingTask]);
+    setDetailsOpen(false);
+    setSubtasksOpen(false);
+    setSubtaskInput('');
+    setError('');
+  }, [editingAreaId, editingTask, taskForm?.mode, taskForm?.mode === 'new' ? taskForm.scheduledDate : undefined, form]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (draft: TaskDraft) => {
     setError('');
 
-    if (!title.trim()) {
-      setError('Digite um título para a tarefa.');
-      return;
-    }
-
     const data: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'> = {
-      title: title.trim(),
-      description: description.trim() || undefined,
-      scheduledDate: scheduledDate || undefined,
+      title: draft.title,
+      description: draft.description || undefined,
+      scheduledDate: draft.scheduledDate || undefined,
+      startDate: draft.startDate || undefined,
+      endDate: draft.endDate || undefined,
       archived: editingTask?.archived || false,
+      completed: editingTask?.completed,
+      projectId: draft.projectId,
     };
 
-    if (editingTask) {
-      updateTask(editingTask.id, data);
-    } else {
+    try {
+      if (editingTask) {
+        updateTask(editingTask.id, data);
+      } else {
       let newTaskId: string;
-      try {
         newTaskId = await addTask(data);
-      } catch {
-        setError('Não foi possível criar a tarefa. Tente novamente.');
-        return;
-      }
 
-      // Attach subtasks only after the parent task exists locally.
-      newSubtasks.forEach((subtaskTitle, index) => {
-        if (subtaskTitle.trim()) addSubtask(newTaskId, subtaskTitle.trim(), index);
-      });
-      selectTask(newTaskId);
+        // As subtarefas só existem depois que a tarefa pai foi persistida.
+        await Promise.all(newSubtasks.filter(Boolean).map((subtaskTitle, index) => addSubtask(newTaskId, subtaskTitle, index)));
+        selectTask(newTaskId);
+      }
+    } catch {
+      setError('Não foi possível salvar a tarefa. Tente novamente.');
+      return;
     }
     closeTaskForm();
   };
@@ -99,7 +107,7 @@ export function TaskForm() {
   };
 
   return (
-    <div className="bg-theme-sidebar rounded-xl p-6 max-w-2xl mx-auto">
+    <div className="h-full min-h-0 overflow-y-auto bg-theme-sidebar rounded-xl p-6 max-w-2xl mx-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold text-theme-text">
           {editingTask ? 'Editar tarefa' : 'Nova tarefa'}
@@ -111,8 +119,8 @@ export function TaskForm() {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Title - Always visible */}
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        {/* Título sempre visível. */}
         <div>
           <label htmlFor="task-title" className="block text-sm font-medium text-theme-text mb-2">
             O que você precisa fazer?
@@ -120,43 +128,39 @@ export function TaskForm() {
           <input
             id="task-title"
             type="text"
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              setError('');
-            }}
+             {...form.register('title')}
             className={`
               w-full px-4 py-3 text-lg border rounded-lg transition-colors bg-theme-bg text-theme-text
               focus:ring-2 focus:ring-theme-accent focus:border-theme-accent outline-none
-              ${error ? 'border-red-300 bg-red-50' : 'border-theme-border'}
+             ${validationError ? 'border-red-300 bg-red-50' : 'border-theme-border'}
             `}
             placeholder="ex.: Revisar a proposta do projeto"
             autoFocus
             maxLength={200}
           />
-          {error && (
-            <p className="mt-1 text-sm text-red-600" role="alert">
-              {error}
+           {validationError && (
+             <p className="mt-1 text-sm text-red-600" role="alert">
+               {validationError}
             </p>
           )}
         </div>
 
-        {/* Date - Always visible */}
-        <div>
-          <label htmlFor="task-date" className="block text-sm font-medium text-theme-text mb-2">
+        {/* Data sempre visível. */}
+          <div>
+            <label htmlFor="task-date" className="block text-sm font-medium text-theme-text mb-2">
             Quando? <span className="text-theme-muted font-normal">(opcional)</span>
           </label>
           <div className="flex items-center gap-1.5 mb-2">
             <button
               type="button"
-              onClick={() => setScheduledDate(getTodayString())}
+               onClick={() => form.setValue('scheduledDate', getTodayString())}
               className={quickDateClasses(scheduledDate === getTodayString())}
             >
               Hoje
             </button>
             <button
               type="button"
-              onClick={() => setScheduledDate(formatDateLocal(addDays(new Date(), 1)))}
+               onClick={() => form.setValue('scheduledDate', formatDateLocal(addDays(new Date(), 1)))}
               className={quickDateClasses(
                 scheduledDate === formatDateLocal(addDays(new Date(), 1))
               )}
@@ -164,10 +168,14 @@ export function TaskForm() {
               Amanhã
             </button>
           </div>
-          <TaskDatePicker id="task-date" value={scheduledDate} onChange={setScheduledDate} />
-        </div>
+             <Controller control={form.control} name="scheduledDate" render={({ field }) => <TaskDatePicker id="task-date" value={field.value} onChange={field.onChange} />} />
+          </div>
 
-        {/* Mais detalhes - collapsible accordion */}
+            <Controller control={form.control} name="projectId" render={({ field: projectField }) => (
+              <TaskOrganizationFields key={editingTask?.id || 'new-task'} areaId={organizationAreaId} projectId={projectField.value} onAreaChange={(areaId) => { setOrganizationAreaId(areaId); projectField.onChange(undefined); }} onProjectChange={projectField.onChange} />
+            )} />
+
+        {/* Detalhes opcionais em um acordeão. */}
         <div className="pt-1 border-t border-theme-border">
           <button
             type="button"
@@ -187,15 +195,14 @@ export function TaskForm() {
 
           {detailsOpen && (
             <div className="space-y-4 pb-3">
-              {/* Description */}
+              {/* Descrição. */}
               <div>
                 <label htmlFor="task-description" className="block text-sm font-medium text-theme-text mb-2">
                   Descrição
                 </label>
                 <textarea
                   id="task-description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                   {...form.register('description')}
                   rows={3}
                   className="w-full px-4 py-3 border border-theme-border rounded-lg transition-colors resize-none bg-theme-bg text-theme-text focus:ring-2 focus:ring-theme-accent focus:border-theme-accent outline-none"
                   placeholder="Notas, contexto, links..."
@@ -203,7 +210,23 @@ export function TaskForm() {
                 />
               </div>
 
-              {/* Subtasks - only when creating a new task */}
+              <div>
+                <label className="block text-sm font-medium text-theme-text mb-2">
+                  Período <span className="text-theme-muted font-normal">(opcional)</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="block text-xs text-theme-muted mb-1">Início</span>
+                   <Controller control={form.control} name="startDate" render={({ field }) => <TaskDatePicker id="task-start-date" value={field.value} onChange={field.onChange} />} />
+                  </div>
+                  <div>
+                    <span className="block text-xs text-theme-muted mb-1">Fim</span>
+                   <Controller control={form.control} name="endDate" render={({ field }) => <TaskDatePicker id="task-end-date" value={field.value} onChange={field.onChange} />} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Subtarefas durante a criação. */}
               {!editingTask && (
                 <div>
                   <label className="block text-sm font-medium text-theme-text mb-2">
@@ -281,7 +304,7 @@ export function TaskForm() {
           )}
         </div>
 
-        {/* Form Actions */}
+        {/* Ações do formulário. */}
         <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-theme-border">
           <Button
             type="button"

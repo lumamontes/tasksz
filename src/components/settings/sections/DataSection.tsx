@@ -5,17 +5,21 @@
 
 import { useStore } from '@nanostores/react';
 import { $tasks, $subtasks } from '../../../stores/tasksStore';
+import { $areas } from '../../../stores/areasStore';
+import { $projects } from '../../../stores/projectsStore';
 import { $settings, resetSettings } from '../../../stores/settingsStore';
 import { useState } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { rxImportBackup, rxClearAllData } from '../../../lib/rxdb/bridge';
-import type { Task, Subtask } from '../../../types';
+import type { Area, Project, Task, Subtask } from '../../../types';
 import type { SettingsState } from '../../../stores/settingsStore';
 
 export function DataSection() {
   const tasks = useStore($tasks);
   const subtasks = useStore($subtasks);
+  const areas = useStore($areas);
+  const projects = useStore($projects);
   const settings = useStore($settings);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const themeLabels: Record<SettingsState['themeId'], string> = {
@@ -28,12 +32,16 @@ export function DataSection() {
   const isValidBackup = (data: unknown): data is {
     tasks?: Task[];
     subtasks?: Subtask[];
+    areas?: Area[];
+    projects?: Project[];
     settings?: SettingsState;
   } => {
     if (!data || typeof data !== 'object') return false;
     const backup = data as Record<string, unknown>;
     if ('tasks' in backup && !Array.isArray(backup.tasks)) return false;
     if ('subtasks' in backup && !Array.isArray(backup.subtasks)) return false;
+    if ('areas' in backup && !Array.isArray(backup.areas)) return false;
+    if ('projects' in backup && !Array.isArray(backup.projects)) return false;
     if ('settings' in backup && backup.settings !== undefined &&
       (!backup.settings || typeof backup.settings !== 'object')) return false;
 
@@ -74,6 +82,8 @@ export function DataSection() {
       exportDate: new Date().toISOString(),
       tasks,
       subtasks,
+      areas,
+      projects,
       settings,
       meta: {
         totalTasks: tasks.length,
@@ -102,7 +112,7 @@ export function DataSection() {
       try {
         const data = JSON.parse(e.target?.result as string);
 
-         if (!isValidBackup(data) || (!data.tasks && !data.subtasks && !data.settings)) {
+          if (!isValidBackup(data) || (!data.tasks && !data.subtasks && !data.areas && !data.projects && !data.settings)) {
            alert('Arquivo de backup inválido. Verifique se o arquivo contém dados válidos do Tarefitas.');
            return;
          }
@@ -110,9 +120,11 @@ export function DataSection() {
         if (confirm('Isso irá substituir todos os seus dados atuais. Tem certeza que deseja continuar?')) {
           const tasks = Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
           const subtasks = Array.isArray(data.subtasks) ? (data.subtasks as Subtask[]) : [];
+          const areas = Array.isArray(data.areas) ? (data.areas as Area[]) : [];
+          const projects = Array.isArray(data.projects) ? (data.projects as Project[]) : [];
           const settings = (data.settings as SettingsState | undefined);
 
-          await rxImportBackup({ tasks, subtasks, settings });
+          await rxImportBackup({ tasks, subtasks, areas, projects, settings });
           alert('Backup restaurado com sucesso!');
         }
       } catch (error) {
@@ -186,7 +198,7 @@ export function DataSection() {
             <div className="flex-1">
               <div className="font-medium text-theme-text mb-2">Fazer backup dos seus dados</div>
               <div className="text-sm text-theme-muted mb-4">
-                Salva todas as suas tarefas, subtarefas e configurações em um arquivo JSON. 
+                 Salva suas tarefas, subtarefas, áreas, projetos e configurações em um arquivo JSON.
                 Recomendamos fazer backups regularmente.
               </div>
               <Button

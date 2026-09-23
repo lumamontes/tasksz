@@ -66,6 +66,8 @@ export async function clearLocalStorage(): Promise<void> {
       db.subtasks.find().remove(),
       db.settings.find().remove(),
       db.profile.find().remove(),
+      db.areas.find().remove(),
+      db.projects.find().remove(),
     ]);
   } catch (error) {
     console.error('Failed to clear local-first storage:', error);

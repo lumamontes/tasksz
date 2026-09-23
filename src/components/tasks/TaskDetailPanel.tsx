@@ -5,24 +5,26 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
-import { $selectedTask, $filteredTasks, $selectedTaskIndex, selectTask, updateTask, deleteTask } from '../../stores/tasksStore';
+import { $selectedTask, $filteredTasks, $selectedTaskIndex, $selectedTaskSubtasks, isTaskCompleted, toggleTaskCompleted, selectTask, updateTask, deleteTask } from '../../stores/tasksStore';
 import { TaskDetailTopBar } from './TaskDetailTopBar';
 import { TaskSummaryStrip } from './TaskSummaryStrip';
 import { SubtasksSection } from './SubtasksSection';
 import { DescriptionSection } from './DescriptionSection';
 import { CalendarSection } from './CalendarSection';
 import { TaskUndoToast } from './TaskUndoToast';
+import type { Task } from '../../types';
 
 interface UndoAction {
   type: 'archive' | 'delete';
   taskId: string;
-  taskData: any;
+  taskData: Pick<Task, 'archived'>;
 }
 
 export function TaskDetailPanel() {
   const selectedTask = useStore($selectedTask);
   const filteredTasks = useStore($filteredTasks);
   const selectedTaskIndex = useStore($selectedTaskIndex);
+  const selectedTaskSubtasks = useStore($selectedTaskSubtasks);
   const [isEditMode, setIsEditMode] = useState(false);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [showSavedHint, setShowSavedHint] = useState(false);
@@ -184,6 +186,8 @@ export function TaskDetailPanel() {
         <div className="relative">
           <TaskDetailTopBar
             task={selectedTask}
+            isCompleted={isTaskCompleted(selectedTask.id, selectedTask, selectedTaskSubtasks)}
+            onToggleCompleted={() => toggleTaskCompleted(selectedTask.id)}
             isEditMode={isEditMode}
             onEditModeChange={setIsEditMode}
             onArchive={handleArchive}

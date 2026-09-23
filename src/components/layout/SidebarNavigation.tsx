@@ -14,15 +14,17 @@ import { useStore } from '@nanostores/react';
 import { $currentSection, setCurrentSection } from '../../stores/settingsStore';
 import { $sidebarCollapsed } from '../../stores/layoutStore';
 import type { Section } from '../../types';
-import { CheckSquare, Settings } from 'lucide-react';
+import { CheckSquare, Layers3, Settings } from 'lucide-react';
 
 const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: 'tasks', label: 'Tarefas' },
+  { id: 'areas', label: 'Áreas' },
   { id: 'configuracoes', label: 'Configurações' },
 ];
 
 const SECTION_ICONS = {
   tasks: CheckSquare,
+  areas: Layers3,
   configuracoes: Settings,
 } as const;
 

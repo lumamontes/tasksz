@@ -14,10 +14,12 @@
  */
 
 import { $tasks, $subtasks } from '../../stores/tasksStore';
+import { $areas } from '../../stores/areasStore';
+import { $projects } from '../../stores/projectsStore';
 import { $settings, defaultSettings } from '../../stores/settingsStore';
 import { $user } from '../../stores/userStore';
 import { getRxDb } from './database';
-import type { Task, Subtask } from '../../types';
+import type { Area, Project, Task, Subtask } from '../../types';
 import type { SettingsState, CustomPalette } from '../../stores/settingsStore';
 import type { UserState } from '../../stores/userStore';
 import type {
@@ -25,6 +27,8 @@ import type {
   SubtaskDoc,
   SettingsDoc,
   ProfileDoc,
+  AreaDoc,
+  ProjectDoc,
 } from './database';
 
 function nowIso(): string {
@@ -52,6 +56,8 @@ export function setCurrentAccount(accountId: string): void {
   // Do not leave the previous account's tasks visible during account changes.
   $tasks.set([]);
   $subtasks.set([]);
+  $areas.set([]);
+  $projects.set([]);
   $settings.set(defaultSettings);
   $user.set({ status: 'anonymous', profile: null });
   void refreshRxDbToAtoms(accountId);
@@ -68,11 +74,13 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
   setCurrentAccount(accountId);
   const db = await getRxDb();
 
-  const [tasks, subtasks, settings, profiles] = await Promise.all([
+  const [tasks, subtasks, settings, profiles, areas, projects] = await Promise.all([
     db.tasks.find({ selector: { accountId: '' } }).exec(),
     db.subtasks.find({ selector: { accountId: '' } }).exec(),
     db.settings.find({ selector: { accountId: '' } }).exec(),
     db.profile.find({ selector: { accountId: '' } }).exec(),
+    db.areas.find({ selector: { accountId: '' } }).exec(),
+    db.projects.find({ selector: { accountId: '' } }).exec(),
   ]);
 
   if (accountId !== getCurrentAccount()) return;
@@ -90,6 +98,12 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
     db.profile.bulkUpsert(
       profiles.map((p) => ({ ...p.toJSON(), id: accountScopedId('profile', accountId), accountId, _modified: nowIso() }))
     ),
+    db.areas.bulkUpsert(
+      areas.map((area) => ({ ...area.toJSON(), accountId, _modified: nowIso() }))
+    ),
+    db.projects.bulkUpsert(
+      projects.map((project) => ({ ...project.toJSON(), accountId, ownerId: accountId, createdBy: accountId, _modified: nowIso() }))
+    ),
   ]);
 
   if (accountId !== getCurrentAccount()) return;
@@ -97,6 +111,8 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
   await Promise.all([
     ...settings.map((setting) => setting.remove()),
     ...profiles.map((profile) => profile.remove()),
+    ...areas.map((area) => area.remove()),
+    ...projects.map((project) => project.remove()),
   ]);
 }
 
@@ -116,7 +132,10 @@ function taskToDoc(
     createdAt: toIsoDate(task.createdAt),
     order: task.order,
     archived: task.archived,
+    completed: task.completed,
     scheduledDate: task.scheduledDate ?? undefined,
+    startDate: task.startDate ?? undefined,
+    endDate: task.endDate ?? undefined,
     recurring: task.recurring ? JSON.stringify(task.recurring) : null,
   };
 }
@@ -133,8 +152,59 @@ function docToTask(doc: TaskDoc): Task {
     updatedAt: new Date(doc._modified ?? Date.now()),
     order: doc.order,
     archived: doc.archived,
+    completed: doc.completed,
     scheduledDate: doc.scheduledDate ?? undefined,
+    startDate: doc.startDate ?? undefined,
+    endDate: doc.endDate ?? undefined,
     recurring: doc.recurring ? (JSON.parse(doc.recurring) as Task['recurring']) : undefined,
+  };
+}
+
+function areaToDoc(area: Area): Omit<AreaDoc, 'accountId' | '_modified' | '_deleted'> {
+  return {
+    id: area.id,
+    name: area.name,
+    description: area.description ?? '',
+    color: area.color,
+    order: area.order,
+    createdAt: toIsoDate(area.createdAt),
+  };
+}
+
+function docToArea(doc: AreaDoc): Area {
+  return {
+    id: doc.id,
+    name: doc.name,
+    description: doc.description ? String(doc.description) : undefined,
+    color: doc.color ?? undefined,
+    order: doc.order,
+    createdAt: new Date(doc.createdAt),
+    updatedAt: new Date(doc._modified ?? Date.now()),
+  };
+}
+
+function projectToDoc(project: Project, accountId = getCurrentAccount()): Omit<ProjectDoc, 'accountId' | '_modified' | '_deleted'> {
+  return {
+    id: project.id,
+    areaId: project.areaId,
+    ownerId: project.ownerId ?? accountId,
+    createdBy: project.ownerId ?? accountId,
+    name: project.name,
+    description: project.description ?? '',
+    createdAt: toIsoDate(project.createdAt),
+    updatedAt: toIsoDate(project.updatedAt),
+  };
+}
+
+function docToProject(doc: ProjectDoc): Project {
+  return {
+    id: doc.id,
+    areaId: doc.areaId ?? undefined,
+    ownerId: doc.ownerId ?? undefined,
+    name: doc.name,
+    description: doc.description ? String(doc.description) : undefined,
+    createdAt: new Date(doc.createdAt),
+    updatedAt: new Date(doc.updatedAt ?? doc._modified ?? Date.now()),
   };
 }
 
@@ -234,6 +304,8 @@ function applyDocsToAtoms(
   subtasks: SubtaskDoc[],
   settings: SettingsDoc[],
   profiles: ProfileDoc[],
+  areas: AreaDoc[],
+  projects: ProjectDoc[],
   accountId: string,
 ): void {
   // An account switch can happen while the database read is pending. Never
@@ -241,6 +313,8 @@ function applyDocsToAtoms(
   if (accountId !== currentAccountId) return;
   $tasks.set(tasks.filter((doc) => doc.accountId === accountId).map(docToTask));
   $subtasks.set(subtasks.filter((doc) => doc.accountId === accountId).map(docToSubtask));
+  $areas.set(areas.filter((doc) => doc.accountId === accountId).map(docToArea).sort((a, b) => a.order - b.order));
+  $projects.set(projects.filter((doc) => doc.accountId === accountId).map(docToProject).sort((a, b) => a.name.localeCompare(b.name)));
   const settingsDoc = settings.find((doc) => doc.accountId === accountId);
   $settings.set(settingsDoc ? docToSettings(settingsDoc) : defaultSettings);
   const profileDoc = profiles.find((doc) => doc.accountId === accountId);
@@ -251,13 +325,15 @@ function applyDocsToAtoms(
 async function refreshRxDbToAtoms(accountId: string): Promise<void> {
   try {
     const db = await getRxDb();
-    const [tasks, subtasks, settings, profiles] = await Promise.all([
+    const [tasks, subtasks, settings, profiles, areas, projects] = await Promise.all([
       db.tasks.find().exec(),
       db.subtasks.find().exec(),
       db.settings.find().exec(),
       db.profile.find().exec(),
+      db.areas.find().exec(),
+      db.projects.find().exec(),
     ]);
-    applyDocsToAtoms(tasks, subtasks, settings, profiles, accountId);
+    applyDocsToAtoms(tasks, subtasks, settings, profiles, areas, projects, accountId);
   } catch (error) {
     console.error('Failed to refresh local-first stores:', error);
   }
@@ -277,8 +353,18 @@ export async function watchRxDbToAtoms(): Promise<() => void> {
     )
   );
   subs.push(
+    db.projects.find().$.subscribe((docs) =>
+      $projects.set(docs.filter((doc) => doc.accountId === currentAccountId).map(docToProject).sort((a, b) => a.name.localeCompare(b.name)))
+    )
+  );
+  subs.push(
     db.subtasks.find().$.subscribe((docs) =>
       $subtasks.set(docs.filter((doc) => doc.accountId === currentAccountId).map(docToSubtask))
+    )
+  );
+  subs.push(
+    db.areas.find().$.subscribe((docs) =>
+      $areas.set(docs.filter((doc) => doc.accountId === currentAccountId).map(docToArea).sort((a, b) => a.order - b.order))
     )
   );
   subs.push(
@@ -376,6 +462,52 @@ export async function rxRemoveSubtask(id: string): Promise<void> {
   if (doc) await doc.remove();
 }
 
+export async function rxInsertArea(area: Area): Promise<void> {
+  const accountId = getCurrentAccount();
+  const db = await getRxDb();
+  if (accountId !== getCurrentAccount()) return;
+  await db.areas.upsert({ ...areaToDoc(area), accountId, _modified: nowIso(), _deleted: false });
+}
+
+export async function rxUpdateArea(id: string, area: Area): Promise<void> {
+  const accountId = getCurrentAccount();
+  const db = await getRxDb();
+  const existing = await db.areas.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
+  await db.areas.upsert({ ...areaToDoc(area), id, accountId, _modified: nowIso(), _deleted: existing?._deleted ?? false });
+}
+
+export async function rxRemoveArea(id: string): Promise<void> {
+  const accountId = getCurrentAccount();
+  const db = await getRxDb();
+  const doc = await db.areas.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
+  if (doc) await doc.remove();
+}
+
+export async function rxInsertProject(project: Project): Promise<void> {
+  const accountId = getCurrentAccount();
+  const db = await getRxDb();
+  if (accountId !== getCurrentAccount()) return;
+  await db.projects.upsert({ ...projectToDoc(project, accountId), accountId, _modified: nowIso(), _deleted: false });
+}
+
+export async function rxUpdateProject(id: string, project: Project): Promise<void> {
+  const accountId = getCurrentAccount();
+  const db = await getRxDb();
+  const existing = await db.projects.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
+  await db.projects.upsert({ ...projectToDoc(project, accountId), id, accountId, _modified: nowIso(), _deleted: existing?._deleted ?? false });
+}
+
+export async function rxRemoveProject(id: string): Promise<void> {
+  const accountId = getCurrentAccount();
+  const db = await getRxDb();
+  const doc = await db.projects.findOne({ selector: { id, accountId } }).exec();
+  if (accountId !== getCurrentAccount()) return;
+  if (doc) await doc.remove();
+}
+
 export async function rxSaveSettings(settings: SettingsState): Promise<void> {
   const db = await getRxDb();
   const existing = await db.settings.findOne({ selector: { accountId: getCurrentAccount() } }).exec();
@@ -409,6 +541,8 @@ export async function rxSaveProfile(user: UserState): Promise<void> {
 export interface BackupPayload {
   tasks?: Task[];
   subtasks?: Subtask[];
+  areas?: Area[];
+  projects?: Project[];
   settings?: SettingsState;
 }
 
@@ -424,6 +558,8 @@ export async function rxImportBackup(data: BackupPayload): Promise<void> {
   await Promise.all([
     db.tasks.find({ selector: { accountId } }).remove(),
     db.subtasks.find({ selector: { accountId } }).remove(),
+    db.areas.find({ selector: { accountId } }).remove(),
+    db.projects.find({ selector: { accountId } }).remove(),
     db.settings.find({ selector: { accountId } }).remove(),
     db.profile.find({ selector: { accountId } }).remove(),
   ]);
@@ -449,6 +585,16 @@ export async function rxImportBackup(data: BackupPayload): Promise<void> {
       })),
     );
   }
+  if (data.areas?.length) {
+    await db.areas.bulkUpsert(
+      data.areas.map((area) => ({ ...areaToDoc(area), accountId, _modified: nowIso(), _deleted: false }))
+    );
+  }
+  if (data.projects?.length) {
+    await db.projects.bulkUpsert(
+      data.projects.map((project) => ({ ...projectToDoc(project, accountId), accountId, _modified: nowIso(), _deleted: false }))
+    );
+  }
   if (data.settings) {
     await db.settings.upsert({
       id: `${accountId || 'guest'}:settings`,
@@ -469,6 +615,8 @@ export async function rxClearAllData(): Promise<void> {
   await Promise.all([
     db.tasks.find({ selector: { accountId } }).remove(),
     db.subtasks.find({ selector: { accountId } }).remove(),
+    db.areas.find({ selector: { accountId } }).remove(),
+    db.projects.find({ selector: { accountId } }).remove(),
     db.settings.find({ selector: { accountId } }).remove(),
     db.profile.find({ selector: { accountId } }).remove(),
   ]);

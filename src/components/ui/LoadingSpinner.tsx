@@ -4,9 +4,6 @@
  * ND-safe: Respects reduceMotion
  */
 
-import { useStore } from '@nanostores/react';
-import { $settings } from '../../stores/settingsStore';
-
 export interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -18,21 +15,15 @@ export function LoadingSpinner({
   className = '',
   'aria-label': ariaLabel = 'Carregando...',
 }: LoadingSpinnerProps) {
-  const settings = useStore($settings);
-
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-8 h-8',
     lg: 'w-16 h-16',
   };
 
-  const animationClass = settings.reduceMotion
-    ? ''
-    : 'animate-spin';
-
   return (
     <div
-      className={`${sizeClasses[size]} ${animationClass} ${className}`}
+      className={`${sizeClasses[size]} motion-safe:animate-spin ${className}`}
       role="status"
       aria-label={ariaLabel}
     >

@@ -15,16 +15,19 @@ import {
   $taskFilter,
   $selectedDay,
   $tasks,
+  $subtasks,
   selectTask,
   setTaskFilter,
   setSelectedDay,
   getTaskProgress,
+  isTaskCompleted,
+  toggleTaskCompleted,
   reorderTasks,
   archiveTasks,
   type TaskFilter,
 } from '../../stores/tasksStore';
 import { $settings } from '../../stores/settingsStore';
-import { openNewTask } from '../../stores/uiStore';
+import { $taskOrganizationNavigation, openNewTask } from '../../stores/uiStore';
 import { $leftPanelWidth } from '../../stores/layoutStore';
 import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
@@ -34,6 +37,8 @@ import { Input } from '../ui/Input';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { htmlToPlainText } from '../../utils/text';
 import { tasksToMarkdown } from '../../utils/taskFormat';
+import { AreaManager } from './AreaManager';
+import { ProjectManager } from './ProjectManager';
 import { addDays, formatDateLocal, formatDayLabelFull, getTodayString, isValidDateString, parseDateLocal } from '../../utils/dateUtils';
 import {
   Plus,
@@ -50,6 +55,8 @@ import {
   Archive,
 } from 'lucide-react';
 import type { Task } from '../../types';
+import { $areas } from '../../stores/areasStore';
+import { $projects } from '../../stores/projectsStore';
 
 interface TaskListPanelProps {
   desktopResizable?: boolean;
@@ -65,6 +72,7 @@ const FILTER_OPTIONS: Array<{ id: TaskFilter; label: string }> = [
 ];
 
 type ViewMode = 'list' | 'calendar' | 'pomodoro';
+type OrganizationView = 'flat' | 'area' | 'area-project' | 'project';
 
 export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) {
   const filteredTasks = useStore($filteredTasks);
@@ -72,7 +80,10 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
   const selectedDay = useStore($selectedDay);
   const currentFilter = useStore($taskFilter);
   const settings = useStore($settings);
+  const areas = useStore($areas);
+  const projects = useStore($projects);
   const leftPanelWidth = useStore($leftPanelWidth);
+  const taskOrganizationNavigation = useStore($taskOrganizationNavigation);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -81,6 +92,12 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [organizationView, setOrganizationView] = useState<OrganizationView>('flat');
+  const [areaFilterId, setAreaFilterId] = useState<string>('');
+  const [projectFilterId, setProjectFilterId] = useState<string>('');
+  const [areaManagerOpen, setAreaManagerOpen] = useState(false);
+  const [projectManagerOpen, setProjectManagerOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -101,6 +118,13 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
       selectTask(null);
     }
   }, [selectedTaskId, filteredTasks]);
+
+  useEffect(() => {
+    if (!taskOrganizationNavigation) return;
+    setAreaFilterId(taskOrganizationNavigation.areaId || '');
+    setProjectFilterId(taskOrganizationNavigation.projectId || '');
+    setFiltersOpen(false);
+  }, [taskOrganizationNavigation]);
 
   // Close the filter popover on outside click
   useEffect(() => {
@@ -142,15 +166,43 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const projectById = new Map(projects.map((project) => [project.id, project]));
+
   // Filter by search query
+  const areaFilteredTasks = areaFilterId
+    ? filteredTasks.filter((task) => task.projectId && projectById.get(task.projectId)?.areaId === areaFilterId)
+    : filteredTasks;
+  const organizationTasks = projectFilterId
+    ? areaFilteredTasks.filter((task) => task.projectId === projectFilterId)
+    : areaFilteredTasks;
   const displayTasks = searchQuery.trim()
-    ? filteredTasks.filter(task =>
+    ? organizationTasks.filter(task =>
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (task.description
           ? htmlToPlainText(task.description).toLowerCase().includes(searchQuery.toLowerCase())
           : false)
       )
-    : filteredTasks;
+    : organizationTasks;
+
+  const groupedTasks: Array<{ label?: string; color?: string; tasks: Task[] }> = organizationView === 'flat'
+    ? [{ tasks: displayTasks }]
+    : organizationView === 'project'
+      ? [
+          ...projects.map((project) => ({ label: project.name, tasks: displayTasks.filter((task) => task.projectId === project.id) })),
+        ].filter((group) => group.tasks.length > 0)
+      : organizationView === 'area-project'
+        ? [
+            ...areas.flatMap((area) => {
+              const areaTasks = displayTasks.filter((task) => task.projectId && projectById.get(task.projectId)?.areaId === area.id);
+              const projectIds = [...new Set(areaTasks.map((task) => task.projectId).filter((projectId): projectId is string => Boolean(projectId)))];
+              return [
+                ...projectIds.map((projectId) => ({ label: `${area.name} / ${projectById.get(projectId)?.name || 'Projeto'}`, color: area.color, tasks: areaTasks.filter((task) => task.projectId === projectId) })),
+              ];
+            }),
+          ].filter((group) => group.tasks.length > 0)
+        : [
+            ...areas.map((area) => ({ label: area.name, color: area.color, tasks: displayTasks.filter((task) => task.projectId && projectById.get(task.projectId)?.areaId === area.id) })),
+          ].filter((group) => group.tasks.length > 0);
 
   const moveDay = (offset: number) => {
     const base = isValidDateString(selectedDay) ? parseDateLocal(selectedDay) : new Date();
@@ -237,6 +289,7 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
   };
 
   const toggleMulti = (taskId: string) => {
+    setSelectionMode(true);
     setSelectedTaskIds((current) =>
       current.includes(taskId)
         ? current.filter((id) => id !== taskId)
@@ -270,6 +323,7 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
 
   const handleContextMenu = (e: React.MouseEvent, taskId: string) => {
     e.preventDefault();
+    setSelectionMode(true);
     setSelectedTaskIds((current) => (current.includes(taskId) ? current : [taskId]));
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
@@ -368,14 +422,20 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
           <div className="text-center py-10">
             <p className="text-theme-muted">Nenhuma tarefa para este dia.</p>
             <p className="text-xs text-theme-muted mt-1">
-              Sem pressa: tarefas sem data ficam guardadas até você terminar.
+              Tarefas sem data ficam aqui até você escolher um dia.
             </p>
           </div>
         ) : (
           <div>
-            <div className="flex items-center gap-2 mb-2">
-<button
-              onClick={() => toggleSelectAllFor(filteredTasks.map((t) => t.id))}
+             <div className="flex items-center justify-between gap-2 mb-2">
+               <button
+               type="button"
+               onClick={() => { setSelectionMode((current) => !current); setSelectedTaskIds([]); }}
+               className="text-xs font-medium text-theme-muted hover:text-theme-text"
+               >{selectionMode ? 'Concluir seleção' : 'Selecionar tarefas'}</button>
+               {selectionMode && <button
+               type="button"
+               onClick={() => toggleSelectAllFor(filteredTasks.map((t) => t.id))}
               aria-label={
                 allSelectedIn(filteredTasks.map((t) => t.id))
                   ? 'Remover todas as tarefas da seleção'
@@ -387,9 +447,9 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                   ? 'bg-theme-accent border-theme-accent text-white'
                   : 'border-theme-border hover:border-theme-accent'
               }`}
-            >
-              {allSelectedIn(filteredTasks.map((t) => t.id)) && <Check className="w-3 h-3" />}
-            </button>
+             >
+               {allSelectedIn(filteredTasks.map((t) => t.id)) && <Check className="w-3 h-3" />}
+               </button>}
             <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
               {selectedTaskIds.length > 0 && (
                 <>
@@ -480,14 +540,15 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
             onClick={() => setFiltersOpen(!filtersOpen)}
             aria-haspopup="menu"
             aria-expanded={filtersOpen}
-            aria-label="Filtrar tarefas por tipo"
-            className={`relative h-10 w-10 rounded-lg border flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent ${
+            aria-label="Filtrar e organizar tarefas"
+            className={`relative h-10 px-3 rounded-lg border flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent ${
               currentFilter !== 'all'
                 ? 'border-theme-accent/50 text-theme-accent bg-theme-accent/10'
                 : 'border-theme-border text-theme-muted hover:text-theme-text hover:bg-theme-bg'
             }`}
-          >
+            >
             <SlidersHorizontal className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs font-medium">Organizar</span>
             {currentFilter !== 'all' && (
               <span
                 className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-theme-accent"
@@ -496,8 +557,10 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
             )}
           </button>
 
+          <span className="sr-only">Use o menu para filtrar ou organizar suas tarefas</span>
+
             {filtersOpen && (
-              <div
+               <div
                 role="menu"
                 aria-label="Tipo de tarefa"
                 className="absolute right-0 mt-2 w-48 bg-theme-sidebar border border-theme-border rounded-xl shadow-lg z-20 p-1"
@@ -523,6 +586,64 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                     )}
                   </button>
                 ))}
+                <div className="my-1 border-t border-theme-border" />
+                <p className="px-3 py-1.5 text-xs font-medium text-theme-muted">Exibir</p>
+                {([
+                  ['flat', 'Lista simples'],
+                  ['area', 'Agrupar por área'],
+                  ['area-project', 'Área e projeto'],
+                  ['project', 'Agrupar por projeto'],
+                ] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    role="menuitemradio"
+                    aria-checked={organizationView === id}
+                    onClick={() => setOrganizationView(id)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent flex items-center justify-between ${
+                      organizationView === id ? 'text-theme-text bg-theme-accent/10' : 'text-theme-muted hover:text-theme-text hover:bg-theme-bg'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    {organizationView === id && <Check className="w-4 h-4 text-theme-accent" />}
+                  </button>
+                ))}
+                <div className="my-1 border-t border-theme-border" />
+                <p className="px-3 py-1.5 text-xs font-medium text-theme-muted">Áreas</p>
+                {areas.length > 0 && (
+                  <select
+                    value={areaFilterId}
+                    onChange={(event) => setAreaFilterId(event.target.value)}
+                    aria-label="Filtrar por área"
+                    className="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-accent"
+                  >
+                    <option value="">Todas as áreas</option>
+                    {areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
+                  </select>
+                )}
+                <button
+                  onClick={() => setAreaManagerOpen(true)}
+                  className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-theme-muted hover:bg-theme-bg hover:text-theme-text"
+                >
+                  Gerenciar áreas
+                </button>
+                <p className="mt-2 px-3 py-1.5 text-xs font-medium text-theme-muted">Projetos</p>
+                {projects.length > 0 && (
+                  <select
+                    value={projectFilterId}
+                    onChange={(event) => setProjectFilterId(event.target.value)}
+                    aria-label="Filtrar por projeto"
+                    className="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-accent"
+                  >
+                    <option value="">Todos os projetos</option>
+                    {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+                  </select>
+                )}
+                <button
+                  onClick={() => setProjectManagerOpen(true)}
+                  className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-theme-muted hover:bg-theme-bg hover:text-theme-text"
+                >
+                  Gerenciar projetos
+                </button>
               </div>
             )}
           </div>
@@ -540,16 +661,21 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
           </p>
           {searchQuery.trim() === '' && (
             <p className="text-xs text-theme-muted mt-1">
-              Sem pressa: tarefas sem data ficam guardadas até você terminar.
+              Tarefas sem data ficam aqui até você escolher um dia.
             </p>
           )}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {/* Selection header — shares the exact same columns as the task cards */}
-          <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-3 mb-1">
-            <button
-              onClick={() => toggleSelectAllFor(displayTasks.map((t) => t.id))}
+           <div className="mb-1 flex items-center justify-between">
+             <button
+               type="button"
+               onClick={() => { setSelectionMode((current) => !current); setSelectedTaskIds([]); }}
+               className="text-xs font-medium text-theme-muted hover:text-theme-text"
+             >{selectionMode ? 'Concluir seleção' : 'Selecionar tarefas'}</button>
+             {selectionMode && <button
+               type="button"
+               onClick={() => toggleSelectAllFor(displayTasks.map((t) => t.id))}
               aria-label={
                 allSelectedIn(displayTasks.map((t) => t.id))
                   ? 'Remover todas as tarefas da seleção'
@@ -561,9 +687,9 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                   ? 'bg-theme-accent border-theme-accent text-white'
                   : 'border-theme-border hover:border-theme-accent'
               }`}
-            >
-              {allSelectedIn(displayTasks.map((t) => t.id)) && <Check className="w-3 h-3" />}
-            </button>
+             >
+               {allSelectedIn(displayTasks.map((t) => t.id)) && <Check className="w-3 h-3" />}
+             </button>}
             <div className="flex items-center justify-end gap-2">
               {selectedTaskIds.length > 0 && (
                 <>
@@ -579,71 +705,72 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                   </button>
                 </>
               )}
-            </div>
+           </div>
           </div>
-          {displayTasks.map((task, index) => {
-            const progress = getTaskProgress(task.id);
-            const isCompleted = progress.total > 0 && progress.percentage === 100;
+           {groupedTasks.map((group) => (
+             <div key={group.label || 'unassigned'} className="contents">
+               {group.label && (
+                 <div className="col-span-3 flex items-center gap-2 pt-3 pb-1 text-sm font-medium text-theme-text">
+                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color || 'var(--theme-accent)' }} />
+                   {group.label}
+                 </div>
+               )}
+               {group.tasks.map((task) => {
+             const index = displayTasks.findIndex((item) => item.id === task.id);
+             const progress = getTaskProgress(task.id);
+             const isCompleted = isTaskCompleted(task.id, task, $subtasks.get());
             const isSelected = task.id === selectedTaskId;
             const isMultiSelected = selectedTaskIds.includes(task.id);
             const isFocused = index === focusedIndex;
 
-            return (
-              <div key={task.id} className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-3">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleMulti(task.id);
-                  }}
-                  aria-label={isMultiSelected ? 'Remover da seleção' : 'Adicionar à seleção'}
-                  aria-pressed={isMultiSelected}
-                  className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent ${
-                    isMultiSelected
-                      ? 'bg-theme-accent border-theme-accent text-white'
-                      : 'border-theme-border hover:border-theme-accent'
-                  }`}
-                >
-                  {isMultiSelected && <Check className="w-3 h-3" />}
-                </button>
-                <button
-                  draggable
-                  onDragStart={handleDragStart(index)}
-                  onDragOver={handleDragOver(index)}
-                  onDrop={handleDrop(index)}
-                  onDragEnd={handleDragEnd}
-                  onClick={(e) => handleCardClick(e, task.id)}
-                  onContextMenu={(e) => handleContextMenu(e, task.id)}
-                  className={`group grid grid-cols-[1rem_minmax(0,1fr)_auto] items-start gap-3 min-w-0 text-left px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-theme-accent cursor-grab active:cursor-grabbing ${
-                    dragIndex === index
-                      ? 'opacity-40'
-                      : dragOverIndex === index && dragIndex !== null
-                      ? 'border-theme-accent/60 ring-2 ring-theme-accent/20'
-                      : isMultiSelected || isSelected
-                      ? 'bg-theme-accent/10 border-theme-border'
-                      : isCompleted
-                      ? 'bg-theme-sidebar border-theme-border text-theme-muted'
-                      : isFocused
-                      ? 'bg-theme-bg border-theme-border text-theme-text'
-                      : 'bg-theme-panel border-theme-border hover:border-theme-accent/50 text-theme-text'
-                  }`}
-                  aria-pressed={isSelected}
-                  aria-grabbed={dragIndex === index}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="mt-1 text-theme-muted/60 group-hover:text-theme-muted transition-colors flex items-center justify-center"
-                  >
-                    <GripVertical className="w-4 h-4" />
-                  </span>
+              return (
+               <div key={task.id}>
+                 <button
+                   draggable
+                   onDragStart={handleDragStart(index)}
+                   onDragOver={handleDragOver(index)}
+                   onDrop={handleDrop(index)}
+                   onDragEnd={handleDragEnd}
+                   onClick={(e) => handleCardClick(e, task.id)}
+                   onContextMenu={(e) => handleContextMenu(e, task.id)}
+                   className={`group grid ${selectionMode ? 'grid-cols-[1.25rem_1rem_minmax(0,1fr)_auto]' : 'grid-cols-[1rem_minmax(0,1fr)_auto]'} items-start gap-3 min-w-0 text-left px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-theme-accent cursor-grab active:cursor-grabbing ${
+                     dragIndex === index
+                       ? 'opacity-40'
+                       : dragOverIndex === index && dragIndex !== null
+                       ? 'border-theme-accent/60 ring-2 ring-theme-accent/20'
+                       : isMultiSelected || isSelected
+                       ? 'bg-theme-accent/10 border-theme-border'
+                       : isCompleted
+                       ? 'bg-theme-sidebar border-theme-border text-theme-muted'
+                       : isFocused
+                       ? 'bg-theme-bg border-theme-border text-theme-text'
+                       : 'bg-theme-panel border-theme-border hover:border-theme-accent/50 text-theme-text'
+                   }`}
+                   aria-pressed={isSelected}
+                   aria-grabbed={dragIndex === index}
+                 >
+                 {selectionMode && <span
+                   role="checkbox"
+                   aria-checked={isMultiSelected}
+                   aria-label={isMultiSelected ? 'Remover da seleção' : 'Adicionar à seleção'}
+                   onClick={(e) => { e.stopPropagation(); toggleMulti(task.id); }}
+                   className={`mt-0.5 shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isMultiSelected ? 'bg-theme-accent border-theme-accent text-white' : 'border-theme-border hover:border-theme-accent'}`}
+                 >{isMultiSelected && <Check className="w-3 h-3" />}</span>}
+                 <span
+                   role="button"
+                   tabIndex={0}
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     toggleTaskCompleted(task.id);
+                   }}
+                   aria-label={isCompleted ? 'Marcar tarefa como não concluída' : 'Marcar tarefa inteira como concluída'}
+                   className={`mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent ${isCompleted ? 'bg-theme-accent border-theme-accent text-white' : 'border-theme-border hover:border-theme-accent'}`}
+                 >
+                   {isCompleted && <Check className="w-3 h-3" />}
+                 </span>
+                 <span aria-hidden="true" className="mt-1 text-theme-muted/60 group-hover:text-theme-muted transition-colors flex items-center justify-center"><GripVertical className="w-4 h-4" /></span>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      {isCompleted && (
-                        <div className="w-4 h-4 rounded-full bg-theme-muted/30 flex items-center justify-center shrink-0">
-                          <svg className="w-2.5 h-2.5 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
+                     <div className="flex items-center gap-2">
                       <h3 className={`font-semibold text-base leading-snug line-clamp-2 ${
                         isCompleted ? 'line-through' : ''
                       }`}>
@@ -679,7 +806,9 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                 </button>
               </div>
             );
-          })}
+               })}
+             </div>
+           ))}
         </div>
       )}
     </div>
@@ -846,6 +975,9 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
           </button>
         </div>
       )}
+
+      {areaManagerOpen && <AreaManager onClose={() => setAreaManagerOpen(false)} />}
+      {projectManagerOpen && <ProjectManager onClose={() => setProjectManagerOpen(false)} />}
 
       {/* Toast */}
       {notice && (
