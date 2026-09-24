@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { useEffect, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
-import { areaInputSchema, projectCreateSchema } from '../../domain/areasProjects/schemas';
+import { areaInputSchema, DEFAULT_AREA_COLOR, projectInputSchema } from '../../domain/areasProjects/schemas';
 import { $areas, addArea } from '../../stores/areasStore';
 import { $projects, addProject } from '../../stores/projectsStore';
 
@@ -11,8 +11,6 @@ interface TaskOrganizationFieldsProps {
   onAreaChange: (areaId: string | undefined) => void;
   onProjectChange: (projectId: string | undefined) => void;
 }
-
-const DEFAULT_AREA_COLOR = '#8b7cf6';
 
 function useDebouncedValue(value: string, delay = 120) {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -86,8 +84,9 @@ export function TaskOrganizationFields({ areaId, projectId, onAreaChange, onProj
   const chooseProject = (nextProjectId: string) => {
     const project = projects.find((item) => item.id === nextProjectId);
     if (!project) return;
-    onProjectChange(project.id);
+    // The Area goes first: changing the Area clears the Project in the form.
     if (project.areaId) onAreaChange(project.areaId);
+    onProjectChange(project.id);
     setProjectQuery(project.name);
     setProjectOpen(false);
     setError(null);
@@ -95,7 +94,7 @@ export function TaskOrganizationFields({ areaId, projectId, onAreaChange, onProj
 
   const createProject = async () => {
     const name = projectQuery.trim();
-    const parsed = projectCreateSchema.safeParse({ name, description: '', color: DEFAULT_AREA_COLOR, areaId: effectiveAreaId });
+    const parsed = projectInputSchema.safeParse({ name, description: '', areaId: effectiveAreaId });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message || 'Informe um nome de projeto.');
       return;

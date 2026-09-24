@@ -4,21 +4,23 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useStore } from '@nanostores/react';
-import { $selectedTaskSubtasks, addSubtask, toggleSubtaskDone, reorderSubtasks } from '../../stores/tasksStore';
+import { addSubtask, toggleSubtaskDone, reorderSubtasks } from '../../stores/tasksStore';
+import { isRendered } from '../../utils/accessibility';
 import { SubtaskRow } from './SubtaskRow';
-import type { Task } from '../../types';
+import type { Subtask, Task } from '../../types';
 import { Check, X, Plus } from 'lucide-react';
 
 interface SubtasksSectionProps {
   task: Task;
+  /** The task's subtasks, sorted by order. */
+  subtasks: Subtask[];
 }
 
 // Overwhelm mode preference (stored in localStorage)
 const OVERWHELM_MODE_KEY = 'tarefitas_overwhelm_mode';
 
-export function SubtasksSection({ task }: SubtasksSectionProps) {
-  const subtasks = useStore($selectedTaskSubtasks);
+export function SubtasksSection({ task, subtasks }: SubtasksSectionProps) {
+  const sectionRef = useRef<HTMLDivElement>(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [selectedSubtaskId, setSelectedSubtaskId] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
   // Keyboard navigation for subtasks
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isRendered(sectionRef.current)) return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
@@ -150,7 +153,7 @@ export function SubtasksSection({ task }: SubtasksSectionProps) {
   const visibleSubtasks = subtasks;
 
   return (
-    <div className="mx-6 mb-6">
+    <div ref={sectionRef} className="mx-6 mb-6">
       {/* Section Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold text-theme-text">

@@ -9,6 +9,7 @@ import { $settings } from '../../stores/settingsStore';
 import { useStore } from '@nanostores/react';
 import type { Subtask } from '../../types';
 import { Check, X } from 'lucide-react';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
 
 interface SubtaskRowProps {
   subtask: Subtask;
@@ -22,6 +23,7 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
   const [isEditing, setIsEditing] = useState(false);
   const [titleValue, setTitleValue] = useState(subtask.title);
   const [showDelete, setShowDelete] = useState(false);
+  const { requestConfirm, confirmDialog } = useConfirmDialog();
 
   const handleSave = () => {
     if (titleValue.trim()) {
@@ -40,9 +42,13 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
   };
 
   const handleDelete = () => {
-    if (confirm('Tem certeza que deseja excluir esta subtarefa?')) {
-      deleteSubtask(subtask.id);
-    }
+    requestConfirm({
+      title: 'Excluir subtarefa?',
+      description: `“${subtask.title}” será excluída. Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir subtarefa',
+      failureMessage: 'Não foi possível excluir a subtarefa.',
+      onConfirm: () => deleteSubtask(subtask.id),
+    });
   };
 
   if (isEditing) {
@@ -141,6 +147,7 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       </button>
+      {confirmDialog}
     </div>
   );
 }

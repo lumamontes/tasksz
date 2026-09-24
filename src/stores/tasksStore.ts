@@ -130,12 +130,6 @@ export const $filteredTasks = computed(
   }
 );
 
-// Selected task index within filtered list
-export const $selectedTaskIndex = computed([$filteredTasks, $selectedTaskId], (filteredTasks, selectedId) => {
-  if (!selectedId) return -1;
-  return filteredTasks.findIndex(task => task.id === selectedId);
-});
-
 // Action to set filter
 export function setTaskFilter(filter: TaskFilter) {
   $taskFilter.set(filter);
@@ -174,23 +168,36 @@ export function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'creat
 }
 
 export function deleteTask(id: string) {
-  void Promise.all([rxRemoveTask(id), rxRemoveSubtasksForTask(id)]);
-  
-  // Clear selection if deleted task was selected
-  if ($selectedTaskId.get() === id) {
+  return removeTasks([id]);
+}
+
+/** Deletes tasks with their subtasks. */
+export async function removeTasks(ids: string[]) {
+  await Promise.all(ids.flatMap((id) => [rxRemoveTask(id), rxRemoveSubtasksForTask(id)]));
+
+  // Clear selection if a deleted task was selected
+  const selectedId = $selectedTaskId.get();
+  if (selectedId && ids.includes(selectedId)) {
     $selectedTaskId.set(null);
   }
 }
 
-// Batch actions (multi-select support)
-export function archiveTasks(ids: string[], archived: boolean) {
+/** Keeps tasks in the task list without a Project. */
+export async function unassignTasksFromProject(ids: string[]) {
   const tasks = $tasks.get();
-  for (const id of ids) {
+  await Promise.all(ids.map((id) => {
+    const target = tasks.find((task) => task.id === id);
+    return target ? rxUpdateTask(id, { ...target, projectId: undefined, updatedAt: new Date() }) : undefined;
+  }));
+}
+
+// Batch actions (multi-select support)
+export async function archiveTasks(ids: string[], archived: boolean) {
+  const tasks = $tasks.get();
+  await Promise.all(ids.map((id) => {
     const target = tasks.find(task => task.id === id);
-    if (target) {
-      void rxUpdateTask(id, { ...target, archived, updatedAt: new Date() });
-    }
-  }
+    return target ? rxUpdateTask(id, { ...target, archived, updatedAt: new Date() }) : undefined;
+  }));
 }
 
 export function setTasksScheduledDate(ids: string[], date?: string) {
@@ -247,7 +254,7 @@ export function updateSubtask(id: string, updates: Partial<Omit<Subtask, 'id' | 
 }
 
 export function deleteSubtask(id: string) {
-  void rxRemoveSubtask(id);
+  return rxRemoveSubtask(id);
 }
 
 export function toggleSubtaskDone(id: string) {

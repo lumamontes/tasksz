@@ -27,7 +27,10 @@ import {
   type TaskFilter,
 } from '../../stores/tasksStore';
 import { $settings } from '../../stores/settingsStore';
-import { $taskOrganizationNavigation, openNewTask } from '../../stores/uiStore';
+import { openNewTask } from '../../stores/uiStore';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
+import { openAreasWorkspace } from '../../stores/areasWorkspaceStore';
+import { filterTasksByOrganization, groupTasksByOrganization, type TaskOrganizationView } from '../../stores/areasSelectors';
 import { $leftPanelWidth } from '../../stores/layoutStore';
 import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
@@ -37,8 +40,6 @@ import { Input } from '../ui/Input';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { htmlToPlainText } from '../../utils/text';
 import { tasksToMarkdown } from '../../utils/taskFormat';
-import { AreaManager } from './AreaManager';
-import { ProjectManager } from './ProjectManager';
 import { addDays, formatDateLocal, formatDayLabelFull, getTodayString, isValidDateString, parseDateLocal } from '../../utils/dateUtils';
 import {
   Plus,
@@ -72,7 +73,6 @@ const FILTER_OPTIONS: Array<{ id: TaskFilter; label: string }> = [
 ];
 
 type ViewMode = 'list' | 'calendar' | 'pomodoro';
-type OrganizationView = 'flat' | 'area' | 'area-project' | 'project';
 
 export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) {
   const filteredTasks = useStore($filteredTasks);
@@ -83,7 +83,6 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
   const areas = useStore($areas);
   const projects = useStore($projects);
   const leftPanelWidth = useStore($leftPanelWidth);
-  const taskOrganizationNavigation = useStore($taskOrganizationNavigation);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -93,16 +92,15 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [organizationView, setOrganizationView] = useState<OrganizationView>('flat');
+  const [organizationView, setOrganizationView] = useState<TaskOrganizationView>('flat');
   const [areaFilterId, setAreaFilterId] = useState<string>('');
   const [projectFilterId, setProjectFilterId] = useState<string>('');
-  const [areaManagerOpen, setAreaManagerOpen] = useState(false);
-  const [projectManagerOpen, setProjectManagerOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const { requestConfirm, confirmDialog } = useConfirmDialog();
 
   const todayStr = getTodayString();
 
@@ -118,13 +116,6 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
       selectTask(null);
     }
   }, [selectedTaskId, filteredTasks]);
-
-  useEffect(() => {
-    if (!taskOrganizationNavigation) return;
-    setAreaFilterId(taskOrganizationNavigation.areaId || '');
-    setProjectFilterId(taskOrganizationNavigation.projectId || '');
-    setFiltersOpen(false);
-  }, [taskOrganizationNavigation]);
 
   // Close the filter popover on outside click
   useEffect(() => {
@@ -166,15 +157,11 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const projectById = new Map(projects.map((project) => [project.id, project]));
-
+  const organizationTasks = filterTasksByOrganization(filteredTasks, projects, {
+    areaId: areaFilterId || undefined,
+    projectId: projectFilterId || undefined,
+  });
   // Filter by search query
-  const areaFilteredTasks = areaFilterId
-    ? filteredTasks.filter((task) => task.projectId && projectById.get(task.projectId)?.areaId === areaFilterId)
-    : filteredTasks;
-  const organizationTasks = projectFilterId
-    ? areaFilteredTasks.filter((task) => task.projectId === projectFilterId)
-    : areaFilteredTasks;
   const displayTasks = searchQuery.trim()
     ? organizationTasks.filter(task =>
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -184,25 +171,7 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
       )
     : organizationTasks;
 
-  const groupedTasks: Array<{ label?: string; color?: string; tasks: Task[] }> = organizationView === 'flat'
-    ? [{ tasks: displayTasks }]
-    : organizationView === 'project'
-      ? [
-          ...projects.map((project) => ({ label: project.name, tasks: displayTasks.filter((task) => task.projectId === project.id) })),
-        ].filter((group) => group.tasks.length > 0)
-      : organizationView === 'area-project'
-        ? [
-            ...areas.flatMap((area) => {
-              const areaTasks = displayTasks.filter((task) => task.projectId && projectById.get(task.projectId)?.areaId === area.id);
-              const projectIds = [...new Set(areaTasks.map((task) => task.projectId).filter((projectId): projectId is string => Boolean(projectId)))];
-              return [
-                ...projectIds.map((projectId) => ({ label: `${area.name} / ${projectById.get(projectId)?.name || 'Projeto'}`, color: area.color, tasks: areaTasks.filter((task) => task.projectId === projectId) })),
-              ];
-            }),
-          ].filter((group) => group.tasks.length > 0)
-        : [
-            ...areas.map((area) => ({ label: area.name, color: area.color, tasks: displayTasks.filter((task) => task.projectId && projectById.get(task.projectId)?.areaId === area.id) })),
-          ].filter((group) => group.tasks.length > 0);
+  const groupedTasks = groupTasksByOrganization(organizationView, displayTasks, areas, projects);
 
   const moveDay = (offset: number) => {
     const base = isValidDateString(selectedDay) ? parseDateLocal(selectedDay) : new Date();
@@ -387,14 +356,26 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
 
   const handleBatchArchive = () => {
     const ids = selectedTaskIds;
-    if (!allArchived) {
-      const label = ids.length === 1 ? 'esta tarefa' : `estas ${ids.length} tarefas`;
-      if (!confirm(`Arquivar ${label}? Elas deixarão a listagem padrão.`)) return;
-    }
-    archiveTasks(ids, !allArchived);
+    const archive = !allArchived;
+    const apply = async () => {
+      await archiveTasks(ids, archive);
+      setSelectedTaskIds([]);
+      showNotice(archive ? 'Arquivadas' : 'Desarquivadas');
+    };
     setContextMenu(null);
-    setSelectedTaskIds([]);
-    showNotice(allArchived ? 'Desarquivadas' : 'Arquivadas');
+
+    // Unarchiving restores tasks, so only archiving asks first.
+    if (!archive) {
+      apply().catch(() => showNotice('Não foi possível desarquivar.'));
+      return;
+    }
+    requestConfirm({
+      title: ids.length === 1 ? 'Arquivar tarefa?' : `Arquivar ${ids.length} tarefas?`,
+      description: `${ids.length === 1 ? 'A tarefa deixará' : 'As tarefas deixarão'} a listagem padrão. Você ${ids.length === 1 ? 'a encontra' : 'as encontra'} depois no filtro Arquivadas.`,
+      confirmLabel: 'Arquivar',
+      failureMessage: 'Não foi possível arquivar as tarefas.',
+      onConfirm: apply,
+    });
   };
 
   const contextMenuStyle = contextMenu
@@ -620,12 +601,6 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                     {areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
                   </select>
                 )}
-                <button
-                  onClick={() => setAreaManagerOpen(true)}
-                  className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-theme-muted hover:bg-theme-bg hover:text-theme-text"
-                >
-                  Gerenciar áreas
-                </button>
                 <p className="mt-2 px-3 py-1.5 text-xs font-medium text-theme-muted">Projetos</p>
                 {projects.length > 0 && (
                   <select
@@ -639,10 +614,13 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
                   </select>
                 )}
                 <button
-                  onClick={() => setProjectManagerOpen(true)}
-                  className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-theme-muted hover:bg-theme-bg hover:text-theme-text"
+                  onClick={() => {
+                    setFiltersOpen(false);
+                    openAreasWorkspace({ areaId: areaFilterId || undefined, projectId: projectFilterId || undefined });
+                  }}
+                  className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-theme-muted hover:bg-theme-bg hover:text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-accent"
                 >
-                  Gerenciar projetos
+                  Gerenciar áreas e projetos
                 </button>
               </div>
             )}
@@ -708,7 +686,7 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
            </div>
           </div>
            {groupedTasks.map((group) => (
-             <div key={group.label || 'unassigned'} className="contents">
+             <div key={group.key} className="contents">
                {group.label && (
                  <div className="col-span-3 flex items-center gap-2 pt-3 pb-1 text-sm font-medium text-theme-text">
                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color || 'var(--theme-accent)' }} />
@@ -976,8 +954,8 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
         </div>
       )}
 
-      {areaManagerOpen && <AreaManager onClose={() => setAreaManagerOpen(false)} />}
-      {projectManagerOpen && <ProjectManager onClose={() => setProjectManagerOpen(false)} />}
+
+      {confirmDialog}
 
       {/* Toast */}
       {notice && (

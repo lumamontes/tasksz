@@ -1,11 +1,14 @@
 /**
  * TaskDetailPanel Component
- * Main container for the refactored task detail view
+ * Detail view for one task. The caller owns selection so the Tasks tab and
+ * the Areas workspace can each keep an independent open task.
  */
 
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
-import { $selectedTask, $filteredTasks, $selectedTaskIndex, $selectedTaskSubtasks, isTaskCompleted, toggleTaskCompleted, selectTask, updateTask, deleteTask } from '../../stores/tasksStore';
+import { $tasks, $subtasks, isTaskCompleted, toggleTaskCompleted, updateTask, deleteTask, archiveTasks } from '../../stores/tasksStore';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
+import { isRendered } from '../../utils/accessibility';
 import { TaskDetailTopBar } from './TaskDetailTopBar';
 import { TaskSummaryStrip } from './TaskSummaryStrip';
 import { SubtasksSection } from './SubtasksSection';
@@ -20,19 +23,31 @@ interface UndoAction {
   taskData: Pick<Task, 'archived'>;
 }
 
-export function TaskDetailPanel() {
-  const selectedTask = useStore($selectedTask);
-  const filteredTasks = useStore($filteredTasks);
-  const selectedTaskIndex = useStore($selectedTaskIndex);
-  const selectedTaskSubtasks = useStore($selectedTaskSubtasks);
+interface TaskDetailPanelProps {
+  taskId: string | null;
+  /** Ordered tasks walked by the previous/next controls. */
+  navigationTasks: Task[];
+  onSelectTask: (taskId: string | null) => void;
+}
+
+export function TaskDetailPanel({ taskId, navigationTasks, onSelectTask }: TaskDetailPanelProps) {
+  const tasks = useStore($tasks);
+  const subtasks = useStore($subtasks);
+  const selectedTask = taskId ? tasks.find((task) => task.id === taskId) ?? null : null;
+  const selectedTaskSubtasks = selectedTask
+    ? subtasks.filter((subtask) => subtask.taskId === selectedTask.id).sort((a, b) => a.order - b.order)
+    : [];
+  const selectedTaskIndex = selectedTask ? navigationTasks.findIndex((task) => task.id === selectedTask.id) : -1;
   const [isEditMode, setIsEditMode] = useState(false);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [showSavedHint, setShowSavedHint] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { requestConfirm, confirmDialog } = useConfirmDialog();
 
   // Keyboard shortcuts for task navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isRendered(containerRef.current)) return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
@@ -42,15 +57,15 @@ export function TaskDetailPanel() {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
         if (e.key === 'ArrowUp' && selectedTaskIndex > 0) {
-          const prevTask = filteredTasks[selectedTaskIndex - 1];
+          const prevTask = navigationTasks[selectedTaskIndex - 1];
           if (prevTask) {
-            selectTask(prevTask.id);
+            onSelectTask(prevTask.id);
             setIsEditMode(false);
           }
-        } else if (e.key === 'ArrowDown' && selectedTaskIndex >= 0 && selectedTaskIndex < filteredTasks.length - 1) {
-          const nextTask = filteredTasks[selectedTaskIndex + 1];
+        } else if (e.key === 'ArrowDown' && selectedTaskIndex >= 0 && selectedTaskIndex < navigationTasks.length - 1) {
+          const nextTask = navigationTasks[selectedTaskIndex + 1];
           if (nextTask) {
-            selectTask(nextTask.id);
+            onSelectTask(nextTask.id);
             setIsEditMode(false);
           }
         }
@@ -71,7 +86,7 @@ export function TaskDetailPanel() {
         if (isEditMode) {
           setIsEditMode(false);
         } else {
-          selectTask(null);
+          onSelectTask(null);
         }
         return;
       }
@@ -79,7 +94,7 @@ export function TaskDetailPanel() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedTaskIndex, filteredTasks, isEditMode]);
+  }, [selectedTaskIndex, navigationTasks, isEditMode, onSelectTask]);
 
   // Focus management: when task changes, focus the container
   useEffect(() => {
@@ -109,24 +124,37 @@ export function TaskDetailPanel() {
 
   const handleArchive = () => {
     if (!selectedTask) return;
-    
+    const taskId = selectedTask.id;
     const wasArchived = selectedTask.archived;
-    if (!wasArchived && !confirm('Arquivar tarefa? Ela deixará a listagem padrão.')) return;
+    const setArchived = async () => {
+      await archiveTasks([taskId], !wasArchived);
+      setUndoAction({ type: 'archive', taskId, taskData: { archived: wasArchived } });
+    };
 
-    updateTask(selectedTask.id, { archived: !wasArchived });
-    
-    setUndoAction({
-      type: 'archive',
-      taskId: selectedTask.id,
-      taskData: { archived: wasArchived }
+    // Unarchiving restores the task, so only archiving asks first.
+    if (wasArchived) {
+      setArchived().catch((error) => console.error('Unarchive failed:', error));
+      return;
+    }
+    requestConfirm({
+      title: 'Arquivar tarefa?',
+      description: `“${selectedTask.title}” deixará a listagem padrão. Você encontra a tarefa depois no filtro Arquivadas.`,
+      confirmLabel: 'Arquivar',
+      failureMessage: 'Não foi possível arquivar a tarefa.',
+      onConfirm: setArchived,
     });
   };
 
   const handleDelete = () => {
     if (!selectedTask) return;
-    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
-      deleteTask(selectedTask.id);
-    }
+    const taskId = selectedTask.id;
+    requestConfirm({
+      title: 'Excluir tarefa?',
+      description: `“${selectedTask.title}” e suas subtarefas serão excluídas. Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir tarefa',
+      failureMessage: 'Não foi possível excluir a tarefa.',
+      onConfirm: () => deleteTask(taskId),
+    });
   };
 
   const handleUndo = () => {
@@ -144,19 +172,19 @@ export function TaskDetailPanel() {
 
   const handlePrevTask = () => {
     if (selectedTaskIndex > 0) {
-      const prevTask = filteredTasks[selectedTaskIndex - 1];
+      const prevTask = navigationTasks[selectedTaskIndex - 1];
       if (prevTask) {
-        selectTask(prevTask.id);
+        onSelectTask(prevTask.id);
         setIsEditMode(false);
       }
     }
   };
 
   const handleNextTask = () => {
-    if (selectedTaskIndex >= 0 && selectedTaskIndex < filteredTasks.length - 1) {
-      const nextTask = filteredTasks[selectedTaskIndex + 1];
+    if (selectedTaskIndex >= 0 && selectedTaskIndex < navigationTasks.length - 1) {
+      const nextTask = navigationTasks[selectedTaskIndex + 1];
       if (nextTask) {
-        selectTask(nextTask.id);
+        onSelectTask(nextTask.id);
         setIsEditMode(false);
       }
     }
@@ -192,11 +220,11 @@ export function TaskDetailPanel() {
             onEditModeChange={setIsEditMode}
             onArchive={handleArchive}
             onDelete={handleDelete}
-            onClose={() => selectTask(null)}
+            onClose={() => onSelectTask(null)}
             onPrevTask={handlePrevTask}
             onNextTask={handleNextTask}
             canGoPrev={selectedTaskIndex > 0}
-            canGoNext={selectedTaskIndex >= 0 && selectedTaskIndex < filteredTasks.length - 1}
+            canGoNext={selectedTaskIndex >= 0 && selectedTaskIndex < navigationTasks.length - 1}
           />
           {showSavedHint && (
             <div className="absolute top-16 right-6 bg-theme-accent text-white px-3 py-1.5 rounded-lg text-xs font-medium opacity-0 animate-[fadeIn_0.3s_ease-out_forwards]">
@@ -214,7 +242,7 @@ export function TaskDetailPanel() {
           <DescriptionSection key={`${selectedTask.id}-description`} task={selectedTask} isEditMode={isEditMode} />
 
           {/* Subtasks - Working Area */}
-          <SubtasksSection key={`${selectedTask.id}-subtasks`} task={selectedTask} />
+          <SubtasksSection key={`${selectedTask.id}-subtasks`} task={selectedTask} subtasks={selectedTaskSubtasks} />
 
           {/* Calendar - Optional */}
           <CalendarSection task={selectedTask} />
@@ -233,6 +261,7 @@ export function TaskDetailPanel() {
           onDismiss={() => setUndoAction(null)}
         />
       )}
+      {confirmDialog}
     </>
   );
 }

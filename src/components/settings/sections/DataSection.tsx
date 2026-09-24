@@ -8,9 +8,10 @@ import { $tasks, $subtasks } from '../../../stores/tasksStore';
 import { $areas } from '../../../stores/areasStore';
 import { $projects } from '../../../stores/projectsStore';
 import { $settings, resetSettings } from '../../../stores/settingsStore';
-import { useState } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
+import { useConfirmDialog } from '../../ui/ConfirmDialog';
+import { countLabel } from '../../../utils/text';
 import { rxImportBackup, rxClearAllData } from '../../../lib/rxdb/bridge';
 import type { Area, Project, Task, Subtask } from '../../../types';
 import type { SettingsState } from '../../../stores/settingsStore';
@@ -21,7 +22,9 @@ export function DataSection() {
   const areas = useStore($areas);
   const projects = useStore($projects);
   const settings = useStore($settings);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const { requestConfirm, confirmDialog } = useConfirmDialog();
+  const summarize = (taskCount: number, areaCount: number, projectCount: number) =>
+    `${countLabel(taskCount, 'tarefa', 'tarefas')}, ${countLabel(areaCount, 'área', 'áreas')} e ${countLabel(projectCount, 'projeto', 'projetos')}`;
   const themeLabels: Record<SettingsState['themeId'], string> = {
     'calm-beige': 'Bege calmo',
     'high-contrast': 'Alto contraste',
@@ -117,16 +120,22 @@ export function DataSection() {
            return;
          }
 
-        if (confirm('Isso irá substituir todos os seus dados atuais. Tem certeza que deseja continuar?')) {
-          const tasks = Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
-          const subtasks = Array.isArray(data.subtasks) ? (data.subtasks as Subtask[]) : [];
-          const areas = Array.isArray(data.areas) ? (data.areas as Area[]) : [];
-          const projects = Array.isArray(data.projects) ? (data.projects as Project[]) : [];
-          const settings = (data.settings as SettingsState | undefined);
+        const backupTasks = Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
+        const backupSubtasks = Array.isArray(data.subtasks) ? (data.subtasks as Subtask[]) : [];
+        const backupAreas = Array.isArray(data.areas) ? (data.areas as Area[]) : [];
+        const backupProjects = Array.isArray(data.projects) ? (data.projects as Project[]) : [];
+        const backupSettings = (data.settings as SettingsState | undefined);
 
-          await rxImportBackup({ tasks, subtasks, areas, projects, settings });
-          alert('Backup restaurado com sucesso!');
-        }
+        requestConfirm({
+          title: 'Substituir seus dados pelo backup?',
+          description: `Seus dados atuais (${summarize(tasks.length, areas.length, projects.length)}) serão substituídos pelo conteúdo de “${file.name}” (${summarize(backupTasks.length, backupAreas.length, backupProjects.length)}). Esta ação não pode ser desfeita.`,
+          confirmLabel: 'Substituir dados',
+          failureMessage: 'Não foi possível restaurar o backup. Seus dados atuais foram mantidos.',
+          onConfirm: async () => {
+            await rxImportBackup({ tasks: backupTasks, subtasks: backupSubtasks, areas: backupAreas, projects: backupProjects, settings: backupSettings });
+            alert('Backup restaurado com sucesso!');
+          },
+        });
       } catch (error) {
         console.error('Import failed:', error);
         alert('Erro ao ler o arquivo. Verifique se é um backup válido do Tarefitas.');
@@ -138,14 +147,15 @@ export function DataSection() {
     reader.readAsText(file);
   };
 
-  const resetAllData = async () => {
-    if (!showResetConfirm) {
-      setShowResetConfirm(true);
-      setTimeout(() => setShowResetConfirm(false), 10000); // Auto-cancel after 10s
-      return;
-    }
+  const resetAllData = () => requestConfirm({
+    title: 'Apagar todos os dados?',
+    description: `Isso remove ${countLabel(tasks.length, 'tarefa', 'tarefas')}, ${countLabel(subtasks.length, 'subtarefa', 'subtarefas')}, ${countLabel(areas.length, 'área', 'áreas')}, ${countLabel(projects.length, 'projeto', 'projetos')} e suas configurações. Esta ação não pode ser desfeita; faça um backup antes se quiser guardar alguma coisa.`,
+    confirmLabel: 'Apagar tudo',
+    failureMessage: 'Não foi possível apagar os dados.',
+    onConfirm: clearAllData,
+  });
 
-    setShowResetConfirm(false);
+  const clearAllData = async () => {
     await rxClearAllData();
     resetSettings();
 
@@ -259,20 +269,11 @@ export function DataSection() {
               </div>
               <Button
                 onClick={resetAllData}
-                variant={showResetConfirm ? 'primary' : 'secondary'}
-                className={
-                  showResetConfirm
-                    ? 'bg-red-700 hover:bg-red-800 text-white'
-                    : 'bg-red-100 text-red-700 hover:bg-red-200'
-                }
+                variant="secondary"
+                className="bg-red-100 text-red-700 hover:bg-red-200"
               >
-                {showResetConfirm ? 'Confirmar Reset' : 'Restaurar Padrões'}
+                Apagar todos os dados
               </Button>
-              {showResetConfirm && (
-                <p className="text-xs text-red-600 mt-2">
-                  Clique novamente para confirmar. Esta ação é irreversível.
-                </p>
-              )}
             </div>
           </div>
         </Card>
@@ -291,6 +292,7 @@ export function DataSection() {
         </Card>
       </div>
 
+      {confirmDialog}
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import { atom } from 'nanostores';
 import type { Area } from '../types';
 import { rxInsertArea, rxRemoveArea, rxUpdateArea, rxUpdateProject } from '../lib/rxdb/bridge';
-import { $projects } from './projectsStore';
+import { $projects, removeProjects } from './projectsStore';
+import { $tasks } from './tasksStore';
+import { planAreaDeletion, type AreaProjectsChoice } from '../domain/areasProjects/deletion';
 import { areaInputSchema, type AreaInput } from '../domain/areasProjects/schemas';
 
 export const $areas = atom<Area[]>([]);
-
-export const SUGGESTED_AREA_NAMES = ['Autocuidado', 'Trabalho', 'Estudos', 'Casa', 'Lazer'] as const;
 
 const SUGGESTED_AREAS: AreaInput[] = [
   { name: 'Autocuidado', description: 'Rotinas de cuidado pessoal e bem-estar.', color: '#8b7cf6' },
@@ -15,6 +15,8 @@ const SUGGESTED_AREAS: AreaInput[] = [
   { name: 'Casa', description: 'Manutenção e responsabilidades do lar.', color: '#2da58a' },
   { name: 'Lazer', description: 'Atividades que trazem descanso e prazer.', color: '#e39a3b' },
 ];
+
+export const SUGGESTED_AREA_NAMES = SUGGESTED_AREAS.map((area) => area.name);
 
 export async function addArea(input: AreaInput) {
   const parsed = areaInputSchema.parse(input);
@@ -47,8 +49,14 @@ export async function updateArea(id: string, updates: AreaInput) {
   await rxUpdateArea(id, { ...area, ...parsed, description: parsed.description || undefined, updatedAt: new Date() });
 }
 
-export async function deleteArea(id: string) {
-  const projects = $projects.get().filter((item) => item.areaId === id);
-  await Promise.all(projects.map((project) => rxUpdateProject(project.id, { ...project, areaId: undefined, updatedAt: new Date() })));
+export async function deleteArea(id: string, choice: AreaProjectsChoice) {
+  const plan = planAreaDeletion(id, choice, $areas.get(), $projects.get(), $tasks.get());
+  if (plan.move) {
+    const { projectIds, toAreaId } = plan.move;
+    const projects = $projects.get().filter((project) => projectIds.includes(project.id));
+    await Promise.all(projects.map((project) => rxUpdateProject(project.id, { ...project, areaId: toAreaId, updatedAt: new Date() })));
+  } else {
+    await removeProjects(plan);
+  }
   await rxRemoveArea(id);
 }
