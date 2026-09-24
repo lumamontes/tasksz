@@ -1,5 +1,6 @@
 # build output
 dist/
+dist-supabase-e2e/
 
 # generated types
 .astro/
@@ -32,3 +33,7 @@ pnpm-debug.log*
 secret
 
 
+
+# Playwright
+test-results/
+playwright-report/

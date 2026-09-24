@@ -5,21 +5,25 @@
  * Lazy-loads the heavy detail/form chunks on demand.
  */
 
-import { Suspense, lazy, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, type ReactNode } from 'react';
+import { preloadWhenIdle } from '../../utils/preload';
 import { useStore } from '@nanostores/react';
 import { $taskForm } from '../../stores/uiStore';
 import { $selectedTaskId } from '../../stores/tasksStore';
 import { TaskDetailEmpty } from './TaskDetailEmpty';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 
-const TaskFormLazy = lazy(() => import('./TaskForm').then((m) => ({ default: m.TaskForm })));
-const TaskDetailLazy = lazy(() => import('./TaskDetail').then((m) => ({ default: m.TaskDetail })));
+const loadTaskForm = () => import('./TaskForm');
+const loadTaskDetail = () => import('./TaskDetail');
+const TaskFormLazy = lazy(() => loadTaskForm().then((m) => ({ default: m.TaskForm })));
+const TaskDetailLazy = lazy(() => loadTaskDetail().then((m) => ({ default: m.TaskDetail })));
 
 function formKey(mode: 'new' | 'edit', taskId?: string): string {
   return mode === 'edit' ? `edit:${taskId}` : 'new';
 }
 
 export function TasksDetailPane() {
+  useEffect(() => preloadWhenIdle(loadTaskForm, loadTaskDetail), []);
   const form = useStore($taskForm);
   const selectedTaskId = useStore($selectedTaskId);
 

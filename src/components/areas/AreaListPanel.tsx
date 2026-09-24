@@ -4,7 +4,7 @@
  * pane through the Areas workspace store.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@nanostores/react';
 import { Plus } from 'lucide-react';
 import { $areas } from '../../stores/areasStore';
@@ -12,13 +12,28 @@ import { $projects } from '../../stores/projectsStore';
 import { countProjectsByArea, filterByName } from '../../stores/areasSelectors';
 import { $resolvedAreasWorkspace, openArea, openCreateAreaDialog } from '../../stores/areasWorkspaceStore';
 import { ColorDot, PrimaryButton, SearchField } from '../areas-projects/ui';
+import { isRendered } from '../../utils/accessibility';
 import { countLabel } from '../../utils/text';
 
 export function AreaListPanel() {
   const areas = useStore($areas);
   const projects = useStore($projects);
-  const { area: selectedArea } = useStore($resolvedAreasWorkspace);
+  const { area: selectedArea, pane } = useStore($resolvedAreasWorkspace);
   const [query, setQuery] = useState('');
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // Compact layouts: coming back from the detail pane hides the focused
+  // control, so continue from the selected Area.
+  useEffect(() => {
+    if (pane !== 'list') return;
+    const frame = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (!isRendered(listRef.current)) return;
+      if (active && active !== document.body && isRendered(active)) return;
+      listRef.current?.querySelector<HTMLElement>('[aria-current="true"]')?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pane]);
 
   const visibleAreas = filterByName(areas, query);
   const projectCounts = countProjectsByArea(projects);
@@ -31,7 +46,7 @@ export function AreaListPanel() {
         </div>
         <PrimaryButton onClick={openCreateAreaDialog} icon={<Plus className="h-4 w-4" />} label="Nova área" />
       </div>
-      <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
+      <ul ref={listRef} className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
         {visibleAreas.map((area) => {
           const selected = selectedArea?.id === area.id;
           return (

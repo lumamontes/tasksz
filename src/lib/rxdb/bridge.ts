@@ -108,11 +108,12 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
 
   if (accountId !== getCurrentAccount()) return;
 
+  // Only settings and profile move to a new account-scoped id, so only their
+  // guest originals remain to remove. Tasks, subtasks, Areas and Projects keep
+  // their id and were updated in place above.
   await Promise.all([
     ...settings.map((setting) => setting.remove()),
     ...profiles.map((profile) => profile.remove()),
-    ...areas.map((area) => area.remove()),
-    ...projects.map((project) => project.remove()),
   ]);
 }
 

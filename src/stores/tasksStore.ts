@@ -167,6 +167,13 @@ export function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'creat
   void rxUpdateTask(id, updated);
 }
 
+/** Assigns or clears the task's Project, writing (and syncing) only real changes. */
+export function setTaskProject(id: string, projectId: string | undefined) {
+  const target = $tasks.get().find((task) => task.id === id);
+  if (!target || target.projectId === projectId) return;
+  updateTask(id, { projectId });
+}
+
 export function deleteTask(id: string) {
   return removeTasks([id]);
 }

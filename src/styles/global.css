@@ -460,3 +460,30 @@ select:focus {
   padding: 0.5rem;
   gap: 0;
 }
+
+/* Phones always get the icon rail: a 20rem sidebar leaves no room for the
+   content. The stored preference still applies from `md` up. */
+@media (max-width: 767px) {
+  #sidebar-navigation {
+    width: 4.5rem;
+  }
+  #sidebar-navigation .sidebar-header,
+  #sidebar-navigation .sidebar-label,
+  #sidebar-navigation .sidebar-nav-label {
+    display: none;
+  }
+  #sidebar-navigation .sidebar-collapsed-only {
+    display: inline-flex;
+  }
+  #sidebar-navigation .sidebar-nav,
+  #sidebar-navigation .sidebar-login-area,
+  #sidebar-navigation .sidebar-footer {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  #sidebar-navigation .sidebar-nav-button {
+    justify-content: center;
+    padding: 0.5rem;
+    gap: 0;
+  }
+}

@@ -19,7 +19,7 @@ export function AreaProjectList({ area }: { area: Area }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-widest text-theme-muted">Área</p>
-          <h2 id="area-projects-title" className="mt-2 break-words text-2xl font-semibold text-theme-text">Projetos de {area.name}</h2>
+          <h2 id="area-projects-title" tabIndex={-1} className="mt-2 break-words text-2xl font-semibold text-theme-text focus:outline-none">Projetos de {area.name}</h2>
         </div>
         <PrimaryButton onClick={() => openCreateProjectDialog(area.id)} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>Novo projeto</PrimaryButton>
       </div>

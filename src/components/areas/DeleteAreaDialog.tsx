@@ -4,7 +4,7 @@ import type { Area } from '../../types';
 import { $areas } from '../../stores/areasStore';
 import { $projects } from '../../stores/projectsStore';
 import { $tasks } from '../../stores/tasksStore';
-import { selectProjectsInArea } from '../../stores/areasSelectors';
+import { summarizeAreaDeletion } from '../../domain/areasProjects/deletion';
 import { removeArea } from '../../stores/areasWorkspaceStore';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { countLabel } from '../../utils/text';
@@ -18,13 +18,9 @@ export function DeleteAreaDialog({ area, onClose }: { area: Area; onClose: () =>
   const tasks = useStore($tasks);
   const [projectsAction, setProjectsAction] = useState<ProjectsAction>('delete');
   const [deleteTasks, setDeleteTasks] = useState(false);
-  const otherAreas = areas.filter((item) => item.id !== area.id);
+  const { projects: areaProjects, taskCount, destinationAreas: otherAreas } = summarizeAreaDeletion(area.id, areas, projects, tasks);
   const [toAreaId, setToAreaId] = useState(otherAreas[0]?.id ?? '');
   const groupName = useId();
-
-  const areaProjects = selectProjectsInArea(projects, area.id);
-  const projectIds = new Set(areaProjects.map((project) => project.id));
-  const taskCount = tasks.filter((task) => task.projectId && projectIds.has(task.projectId)).length;
   const hasProjects = areaProjects.length > 0;
 
   const confirm = () => removeArea(area.id, projectsAction === 'move'

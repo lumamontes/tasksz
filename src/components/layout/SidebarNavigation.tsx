@@ -47,6 +47,7 @@ export function SidebarNavigation() {
             role="tab"
             aria-selected={currentSection === section.id}
             aria-controls={`${section.id}-panel`}
+            aria-label={section.label}
             title={collapsed ? section.label : undefined}
             className={`
               w-full flex items-center gap-2.5 rounded-md text-sm font-medium

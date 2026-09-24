@@ -688,10 +688,10 @@ export function TaskListPanel({ desktopResizable = false }: TaskListPanelProps) 
            {groupedTasks.map((group) => (
              <div key={group.key} className="contents">
                {group.label && (
-                 <div className="col-span-3 flex items-center gap-2 pt-3 pb-1 text-sm font-medium text-theme-text">
-                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color || 'var(--theme-accent)' }} />
+                 <h3 className="col-span-3 flex items-center gap-2 pt-3 pb-1 text-sm font-medium text-theme-text">
+                   <span className="w-2 h-2 rounded-full" aria-hidden="true" style={{ backgroundColor: group.color || 'var(--theme-accent)' }} />
                    {group.label}
-                 </div>
+                 </h3>
                )}
                {group.tasks.map((task) => {
              const index = displayTasks.findIndex((item) => item.id === task.id);

@@ -5,10 +5,10 @@ import type { Area } from '../../types';
 import { updateArea } from '../../stores/areasStore';
 import { $projects } from '../../stores/projectsStore';
 import { $tasks } from '../../stores/tasksStore';
-import { countActiveTasksByProject, selectProjectsInArea } from '../../stores/areasSelectors';
-import { openCreateProjectDialog, showAreaProjects } from '../../stores/areasWorkspaceStore';
+import { countActiveTasksInArea, selectProjectsInArea } from '../../stores/areasSelectors';
+import { openCreateProjectDialog, showAreaList, showAreaProjects } from '../../stores/areasWorkspaceStore';
 import { AreaForm } from '../areas-projects/forms';
-import { EntityHeader, StatCard } from '../areas-projects/ui';
+import { BackLink, EntityHeader, StatCard } from '../areas-projects/ui';
 import { DeleteAreaDialog } from './DeleteAreaDialog';
 import { ProjectListCard } from './ProjectListCard';
 
@@ -21,11 +21,11 @@ export function AreaOverview({ area }: { area: Area }) {
   const [deleting, setDeleting] = useState(false);
 
   const areaProjects = selectProjectsInArea(projects, area.id);
-  const taskCounts = countActiveTasksByProject(tasks);
-  const taskCount = areaProjects.reduce((total, project) => total + (taskCounts.get(project.id) ?? 0), 0);
+  const taskCount = countActiveTasksInArea(area.id, projects, tasks);
 
   return (
     <section className="mx-auto max-w-3xl p-6 lg:p-8" aria-label={`Área ${area.name}`}>
+      <BackLink className="mb-5 lg:hidden" onClick={showAreaList}>Áreas</BackLink>
       <EntityHeader
         eyebrow="Área"
         title={area.name}

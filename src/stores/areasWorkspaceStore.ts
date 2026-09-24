@@ -20,6 +20,7 @@ const initialState: AreasWorkspaceState = {
   projectId: null,
   projectTab: 'overview',
   taskId: null,
+  pane: 'list',
 };
 
 export const $areasWorkspace = atom<AreasWorkspaceState>(initialState);
@@ -38,7 +39,12 @@ function patch(updates: Partial<AreasWorkspaceState>) {
 }
 
 export function openArea(areaId: string) {
-  patch({ areaId, view: 'overview', projectId: null, taskId: null });
+  patch({ areaId, view: 'overview', projectId: null, taskId: null, pane: 'detail' });
+}
+
+/** Compact layouts only: go back from an Area to the Area list. */
+export function showAreaList() {
+  patch({ pane: 'list' });
 }
 
 export function showAreaOverview() {
@@ -56,7 +62,7 @@ export function showAreaProjects() {
 export function openProject(projectId: string, areaId?: string) {
   const projectAreaId = areaId ?? $projects.get().find((item) => item.id === projectId)?.areaId;
   if (!projectAreaId) return;
-  patch({ areaId: projectAreaId, view: 'project', projectId, projectTab: 'overview', taskId: null });
+  patch({ areaId: projectAreaId, view: 'project', projectId, projectTab: 'overview', taskId: null, pane: 'detail' });
 }
 
 export function setProjectTab(projectTab: ProjectTab) {

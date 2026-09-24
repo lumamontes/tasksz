@@ -247,6 +247,24 @@ create policy "users can update own areas"
   on public.areas for update using (auth.uid()::text = account_id)
   with check (auth.uid()::text = account_id);
 
+-- Columns added by 20260920/20260921 migrations, kept here so a fresh
+-- install matches a migrated database.
+alter table public.tasks add column if not exists completed boolean;
+alter table public.projects add column if not exists area_id text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'projects_area_id_fkey'
+  ) then
+    alter table public.projects
+      add constraint projects_area_id_fkey
+      foreign key (area_id) references public.areas(id) on delete set null;
+  end if;
+end $$;
+
+create index if not exists projects_area_id_idx on public.projects(area_id);
+
 do $$
 begin
   if exists (

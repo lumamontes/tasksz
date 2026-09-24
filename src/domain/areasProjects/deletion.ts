@@ -27,9 +27,35 @@ export interface AreaDeletionPlan extends ProjectDeletionPlan {
   move: { projectIds: string[]; toAreaId: string } | null;
 }
 
-export function planProjectsDeletion(projectIds: string[], choice: ProjectTasksChoice, tasks: Task[]): ProjectDeletionPlan {
+function taskIdsInProjects(projectIds: string[], tasks: Task[]): string[] {
   const ids = new Set(projectIds);
-  const taskIds = tasks.filter((task) => task.projectId && ids.has(task.projectId)).map((task) => task.id);
+  return tasks.filter((task) => task.projectId && ids.has(task.projectId)).map((task) => task.id);
+}
+
+/** Every task (archived included) that deleting these Projects affects. */
+export function countTasksInProjects(projectIds: string[], tasks: Task[]): number {
+  return taskIdsInProjects(projectIds, tasks).length;
+}
+
+export interface AreaDeletionSummary {
+  projects: Project[];
+  taskCount: number;
+  /** Areas that can receive the Projects instead. */
+  destinationAreas: Area[];
+}
+
+/** What the owner is choosing about when deleting an Area. */
+export function summarizeAreaDeletion(areaId: string, areas: Area[], projects: Project[], tasks: Task[]): AreaDeletionSummary {
+  const areaProjects = projects.filter((project) => project.areaId === areaId);
+  return {
+    projects: areaProjects,
+    taskCount: countTasksInProjects(areaProjects.map((project) => project.id), tasks),
+    destinationAreas: areas.filter((area) => area.id !== areaId),
+  };
+}
+
+export function planProjectsDeletion(projectIds: string[], choice: ProjectTasksChoice, tasks: Task[]): ProjectDeletionPlan {
+  const taskIds = taskIdsInProjects(projectIds, tasks);
   return {
     projectIds,
     deleteTaskIds: choice.deleteTasks ? taskIds : [],

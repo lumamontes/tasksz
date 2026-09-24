@@ -30,6 +30,8 @@ import {
   type AreaDoc as AreaDocType,
   type ProjectDoc as ProjectDocType,
 } from './schema';
+import { FIELD_NAMES } from './fieldNames';
+import { createConflictHandler } from './conflicts';
 
 export type TaskDoc = TaskDocType;
 export type SubtaskDoc = SubtaskDocType;
@@ -60,29 +62,6 @@ export interface ReplicationHandle {
   projects: RxSupabaseReplicationState<ProjectDoc>;
 }
 
-const FIELD_NAMES = [
-  ['accountId', 'account_id'],
-  ['createdBy', 'created_by'],
-  ['projectId', 'project_id'],
-  ['assigneeId', 'assignee_id'],
-  ['areaId', 'area_id'],
-  ['ownerId', 'owner_id'],
-  ['updatedAt', 'updated_at'],
-  ['createdAt', 'created_at'],
-  ['order', 'sort_order'],
-  ['scheduledDate', 'scheduled_date'],
-  ['startDate', 'start_date'],
-  ['endDate', 'end_date'],
-  ['taskId', 'task_id'],
-  ['themeId', 'theme_id'],
-  ['customPalette', 'custom_palette'],
-  ['fontId', 'font_id'],
-  ['fontScale', 'font_scale'],
-  ['showProgressBars', 'show_progress_bars'],
-  ['reduceMotion', 'reduce_motion'],
-  ['soundEnabled', 'sound_enabled'],
-  ['celebrationsEnabled', 'celebrations_enabled'],
-] as const;
 
 function mapFields<T extends object>(
   document: T,
@@ -137,6 +116,7 @@ export function getRxDb(): Promise<RxDatabase<RxCollections>> {
     await db.addCollections<RxCollections>({
       tasks: {
         schema: TASK_SCHEMA,
+        conflictHandler: createConflictHandler<TaskDoc>(toLocalDocument),
         migrationStrategies: {
           1: (oldDocument) => ({
             ...oldDocument,
@@ -150,12 +130,13 @@ export function getRxDb(): Promise<RxDatabase<RxCollections>> {
           },
         },
       },
-      subtasks: { schema: SUBTASK_SCHEMA },
-      settings: { schema: SETTINGS_SCHEMA },
-      profile: { schema: PROFILE_SCHEMA },
-      areas: { schema: AREA_SCHEMA },
+      subtasks: { schema: SUBTASK_SCHEMA, conflictHandler: createConflictHandler<SubtaskDoc>(toLocalDocument) },
+      settings: { schema: SETTINGS_SCHEMA, conflictHandler: createConflictHandler<SettingsDoc>(toLocalDocument) },
+      profile: { schema: PROFILE_SCHEMA, conflictHandler: createConflictHandler<ProfileDoc>(toLocalDocument) },
+      areas: { schema: AREA_SCHEMA, conflictHandler: createConflictHandler<AreaDoc>(toLocalDocument) },
       projects: {
         schema: PROJECT_SCHEMA,
+        conflictHandler: createConflictHandler<ProjectDoc>(toLocalDocument),
         migrationStrategies: {
           1: (oldDocument) => ({ ...oldDocument, areaId: oldDocument.areaId || undefined }),
         },

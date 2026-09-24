@@ -20,6 +20,22 @@ export function countActiveTasksByProject(tasks: Task[]): Map<string, number> {
   return counts;
 }
 
+export function countActiveTasksInArea(areaId: string, projects: Project[], tasks: Task[]): number {
+  const counts = countActiveTasksByProject(tasks);
+  return selectProjectsInArea(projects, areaId).reduce((total, project) => total + (counts.get(project.id) ?? 0), 0);
+}
+
+/** A task belongs to an Area only through its Project. */
+export function areaOfTask(task: Pick<Task, 'projectId'>, projects: Project[]): string | undefined {
+  return task.projectId ? projects.find((project) => project.id === task.projectId)?.areaId : undefined;
+}
+
+/** Choosing another Area drops a Project that lives outside it. */
+export function projectAfterAreaChange(projectId: string | undefined, nextAreaId: string | undefined, projects: Project[]): string | undefined {
+  if (!projectId || !nextAreaId) return undefined;
+  return areaOfTask({ projectId }, projects) === nextAreaId ? projectId : undefined;
+}
+
 export function countProjectsByArea(projects: Project[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const project of projects) {
@@ -124,6 +140,8 @@ function orderGroups(groups: TaskGroup[], view: TaskOrganizationView, areas: Are
 
 export type AreaDetailView = 'overview' | 'projects' | 'project';
 export type ProjectTab = 'overview' | 'tasks';
+/** Which pane a single-column (compact) layout shows. */
+export type AreasPane = 'list' | 'detail';
 
 export interface AreasWorkspaceState {
   areaId: string | null;
@@ -132,6 +150,7 @@ export interface AreasWorkspaceState {
   projectTab: ProjectTab;
   /** Task opened from a Project; independent from the Tasks tab selection. */
   taskId: string | null;
+  pane: AreasPane;
 }
 
 export interface ResolvedAreasWorkspace {
@@ -141,6 +160,8 @@ export interface ResolvedAreasWorkspace {
   projectTab: ProjectTab;
   projectTasks: Task[];
   task: Task | null;
+  /** Without Areas the list is empty, so compact layouts show the detail's empty state. */
+  pane: AreasPane;
 }
 
 /**
@@ -164,5 +185,5 @@ export function resolveAreasWorkspace(
     ? tasks.find((item) => item.id === state.taskId && item.projectId === project.id) ?? null
     : null;
 
-  return { area, view, project, projectTab: state.projectTab, projectTasks, task };
+  return { area, view, project, projectTab: state.projectTab, projectTasks, task, pane: area ? state.pane : 'detail' };
 }

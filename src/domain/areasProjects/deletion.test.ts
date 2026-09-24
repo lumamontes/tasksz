@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Area, Project, Task } from '../../types';
-import { planAreaDeletion, planProjectsDeletion } from './deletion';
+import { countTasksInProjects, planAreaDeletion, planProjectsDeletion, summarizeAreaDeletion } from './deletion';
 
 const now = new Date();
 const area = (id: string): Area => ({ id, name: id, order: 0, createdAt: now, updatedAt: now });
@@ -22,6 +22,19 @@ describe('project deletion', () => {
 
   it('deletes the tasks when asked', () => {
     expect(planProjectsDeletion(['site'], { deleteTasks: true }, tasks).deleteTaskIds).toEqual(['t-site']);
+  });
+});
+
+describe('deletion summaries', () => {
+  it('summarizes what deleting an Area affects and where Projects can go', () => {
+    const summary = summarizeAreaDeletion('work', areas, projects, tasks);
+    expect(summary.projects.map((project) => project.id)).toEqual(['site', 'app']);
+    expect(summary.taskCount).toBe(2);
+    expect(summary.destinationAreas.map((area) => area.id)).toEqual(['home']);
+  });
+
+  it('counts archived tasks too, since deletion affects them', () => {
+    expect(countTasksInProjects(['site'], [...tasks, { ...task('t-old', 'site'), archived: true }])).toBe(2);
   });
 });
 

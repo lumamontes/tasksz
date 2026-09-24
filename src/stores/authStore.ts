@@ -46,7 +46,23 @@ function setPartial(partial: Partial<AuthState>): void {
   $auth.set({ ...$auth.get(), ...partial });
 }
 
-async function applySession(session: AuthSession | null): Promise<void> {
+let sessionApplication: { userId: string | null; promise: Promise<void> } | null = null;
+
+/**
+ * Sign-up and sign-in resolve while Supabase also emits the same session via
+ * `onAuthStateChange`. Reuse the in-flight application for the same user and
+ * queue a different one, so re-keying and replication never start twice.
+ */
+function applySession(session: AuthSession | null): Promise<void> {
+  const userId = session?.userId ?? null;
+  if (sessionApplication?.userId === userId) return sessionApplication.promise;
+  const previous = sessionApplication?.promise ?? Promise.resolve();
+  const promise = previous.catch(() => undefined).then(() => runApplySession(session));
+  sessionApplication = { userId, promise };
+  return promise;
+}
+
+async function runApplySession(session: AuthSession | null): Promise<void> {
   if (!session) {
     await stopSync();
     setCurrentAccount('');
@@ -199,6 +215,8 @@ export async function signInWithGoogle(): Promise<boolean> {
 }
 
 export async function signOut(): Promise<void> {
+  // Signing back in as the same user must start a fresh session application.
+  sessionApplication = null;
   try {
     await getAuthProvider().signOut();
   } finally {

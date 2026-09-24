@@ -61,7 +61,7 @@ export function PrimaryButton({ onClick, icon, children, label }: {
 export function BackLink({ onClick, children, className = 'mb-5' }: { onClick: () => void; children: ReactNode; className?: string }) {
   return (
     <button type="button" onClick={onClick} className={`${className} rounded text-sm text-theme-muted hover:text-theme-text focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent`}>
-      <span aria-hidden="true">← </span>{children}
+      <span aria-hidden="true">← </span><span className="sr-only">Voltar para </span>{children}
     </button>
   );
 }
@@ -84,7 +84,7 @@ export function EntityHeader({ eyebrow, title, description, color, editLabel, de
           {color && <ColorDot color={color} />}
           <p className="text-xs font-medium uppercase tracking-widest text-theme-muted">{eyebrow}</p>
         </div>
-        <h2 className="mt-2 break-words text-2xl font-semibold text-theme-text">{title}</h2>
+        <h2 tabIndex={-1} className="mt-2 break-words text-2xl font-semibold text-theme-text focus:outline-none">{title}</h2>
         <p className="mt-1 text-sm text-theme-muted">{description}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1">

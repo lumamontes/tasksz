@@ -15,7 +15,18 @@ import { SyncReloadNotice } from '../sync/SyncReloadNotice';
 import AreasPage from '../areas/AreasPage.astro';
 ---
 
-<div id="app-shell" class="flex h-screen bg-theme-bg font-sans text-theme-text overflow-hidden">
+<!-- Static loading state: shown until local storage is ready. The shell
+     stays inert meanwhile so its not-yet-loaded controls are unreachable. -->
+<div id="app-loading" role="status" class="fixed inset-0 z-[60] flex items-center justify-center bg-theme-bg">
+  <div class="text-center">
+    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-theme-panel">
+      <span class="app-loading-spinner h-6 w-6 rounded-full border-2 border-theme-border border-t-theme-accent" aria-hidden="true"></span>
+    </div>
+    <p class="text-theme-muted">Carregando...</p>
+  </div>
+</div>
+
+<div id="app-shell" inert aria-busy="true" class="flex h-screen bg-theme-bg font-sans text-theme-text overflow-hidden">
   <!-- Skip Links for Accessibility -->
   <div class="sr-only">
     <a 
@@ -52,7 +63,11 @@ import AreasPage from '../areas/AreasPage.astro';
     <div id="main-content-area" class="h-full">
       <TasksArea />
       <AreasPage />
-      <SettingsPage client:visible />
+      <!-- The shell script toggles this wrapper, never the island's own DOM,
+           so hydration never sees attributes it did not render. -->
+      <div data-section="configuracoes" class="h-full">
+        <SettingsPage client:visible />
+      </div>
     </div>
   </main>
 
@@ -72,12 +87,23 @@ import AreasPage from '../areas/AreasPage.astro';
   import { $currentSection, $settings, applyTheme, applyFont } from '../../stores/settingsStore';
   import { $sidebarCollapsed, loadSidebarCollapsed } from '../../stores/layoutStore';
   import { setSyncError } from '../../stores/syncStore';
+  import { $persistenceReady } from '../../stores/persistence';
   
   // A falha de inicialização fica disponível para o indicador de sincronização.
   initStores().catch((error) => {
     setSyncError(error instanceof Error ? error.message : 'Não foi possível inicializar o armazenamento local.');
   });
   loadSidebarCollapsed();
+
+  // Reveal the app once local storage is ready (also after a failed start,
+  // so the sync indicator can show the error).
+  $persistenceReady.subscribe((ready) => {
+    if (!ready) return;
+    document.getElementById('app-loading')?.remove();
+    const shell = document.getElementById('app-shell');
+    shell?.removeAttribute('inert');
+    shell?.removeAttribute('aria-busy');
+  });
   
   // Apply initial theme and font
   const settings = $settings.get();
@@ -143,6 +169,16 @@ import AreasPage from '../areas/AreasPage.astro';
 </script>
 
 <style>
+  .app-loading-spinner {
+    animation: app-loading-spin 0.8s linear infinite;
+  }
+  @keyframes app-loading-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-loading-spinner { animation: none; }
+  }
+
   /* Ensure proper layout */
   #app-shell {
     position: relative;

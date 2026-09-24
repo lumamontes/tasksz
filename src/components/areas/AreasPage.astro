@@ -5,6 +5,10 @@
  * separate islands that share selection through the Areas workspace store.
  * Both render browser-local RxDB state, so server output cannot match and
  * they use `client:only`.
+ *
+ * Below `lg` the shell shows one pane at a time. The detail island exposes the
+ * store's pane as `data-areas-pane`; CSS reads it with `:has()`, so pane
+ * switching needs no script.
  */
 
 import { AreaListPanel } from './AreaListPanel';
@@ -12,16 +16,25 @@ import { AreaDetailPane } from './AreaDetailPane';
 ---
 
 <section data-section="areas" class="h-full bg-theme-panel" aria-labelledby="areas-title">
-  <div class="flex h-full min-h-0 overflow-hidden">
-    <nav class="flex w-[22rem] shrink-0 flex-col border-r border-theme-border bg-theme-bg" aria-labelledby="areas-title">
+  <div data-areas-shell class="flex h-full min-h-0 overflow-hidden">
+    <nav data-areas-list class="flex w-full shrink-0 flex-col border-theme-border bg-theme-bg lg:w-72 lg:border-r xl:w-[22rem]" aria-labelledby="areas-title">
       <header class="px-5 pt-5 pb-4">
         <p class="text-xs font-medium uppercase tracking-widest text-theme-muted">Workspace</p>
         <h1 id="areas-title" class="mt-1 text-xl font-semibold text-theme-text">Áreas</h1>
       </header>
       <AreaListPanel client:only="react" />
     </nav>
-    <div class="min-w-0 flex-1 overflow-y-auto">
+    <div data-areas-detail class="min-w-0 flex-1 overflow-y-auto">
       <AreaDetailPane client:only="react" />
     </div>
   </div>
 </section>
+
+<style is:global>
+  @media (max-width: 1023px) {
+    [data-areas-shell]:has([data-areas-pane='detail']) [data-areas-list],
+    [data-areas-shell]:has([data-areas-pane='list']) [data-areas-detail] {
+      display: none;
+    }
+  }
+</style>

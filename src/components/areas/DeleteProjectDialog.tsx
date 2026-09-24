@@ -3,13 +3,14 @@ import { useStore } from '@nanostores/react';
 import type { Project } from '../../types';
 import { $tasks } from '../../stores/tasksStore';
 import { removeProject } from '../../stores/areasWorkspaceStore';
+import { countTasksInProjects } from '../../domain/areasProjects/deletion';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DeleteTasksOption } from './DeleteTasksOption';
 
 export function DeleteProjectDialog({ project, onClose }: { project: Project; onClose: () => void }) {
   const tasks = useStore($tasks);
   const [deleteTasks, setDeleteTasks] = useState(false);
-  const taskCount = tasks.filter((task) => task.projectId === project.id).length;
+  const taskCount = countTasksInProjects([project.id], tasks);
 
   return (
     <ConfirmDialog
