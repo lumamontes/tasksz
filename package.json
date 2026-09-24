@@ -30,7 +30,8 @@
     "test:watch": "vitest",
     "preview": "astro preview",
     "astro": "astro",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:supabase": "playwright test --config=playwright.supabase.config.ts"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",
