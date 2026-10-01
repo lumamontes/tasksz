@@ -94,8 +94,8 @@ jobs:
       - name: Start local Supabase
         run: supabase start
 
-      - name: Apply test schema
-        run: supabase db query --local --file supabase/schema.sql
+      - name: Apply test migrations
+        run: supabase db reset --local
 
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium

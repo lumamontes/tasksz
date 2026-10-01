@@ -69,7 +69,7 @@ test('imports a backup exported before Areas and Projects existed', async ({ app
   await app.taskRow('Tarefa antiga').click();
   const detail = page.getByRole('dialog', { name: 'Tarefa antiga' });
   await expect(detail).toBeVisible();
-  await expect(detail.getByRole('combobox', { name: 'Área' })).toHaveValue('');
+  await expect(detail.getByRole('combobox', { name: 'Projeto' })).toHaveValue('');
   await expect(detail.getByRole('button', { name: 'Marcar como não concluída' })).toHaveCount(1);
 
   await app.goTo('Áreas');
