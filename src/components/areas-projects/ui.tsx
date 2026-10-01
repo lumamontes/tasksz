@@ -126,7 +126,7 @@ export function ListRow({ onClick, leading, title, meta, trailing, selected }: {
         type="button"
         onClick={onClick}
         aria-current={selected || undefined}
-        className={`flex w-full items-center gap-3 px-4 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme-accent ${selected ? 'bg-theme-accent/10' : 'hover:bg-theme-sidebar'}`}
+       className={`flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme-accent ${selected ? 'bg-theme-accent/10' : 'hover:bg-theme-sidebar'}`}
       >
         {leading}
         <span className="min-w-0 flex-1">

@@ -88,6 +88,12 @@ import AreasPage from '../areas/AreasPage.astro';
   import { $sidebarCollapsed, loadSidebarCollapsed } from '../../stores/layoutStore';
   import { setSyncError } from '../../stores/syncStore';
   import { $persistenceReady } from '../../stores/persistence';
+
+  const validSections = ['tasks', 'areas', 'configuracoes'] as const;
+  const sectionFromUrl = new URL(window.location.href).searchParams.get('section');
+  if (sectionFromUrl && validSections.includes(sectionFromUrl as typeof validSections[number])) {
+    $currentSection.set(sectionFromUrl as typeof validSections[number]);
+  }
   
   // A falha de inicialização fica disponível para o indicador de sincronização.
   initStores().catch((error) => {
@@ -157,7 +163,22 @@ import AreasPage from '../areas/AreasPage.astro';
 
   // Subscribe to store changes
   $settings.subscribe(updateDensity);
-  $currentSection.subscribe(updateMainContent);
+  const syncSectionUrl = (section: typeof validSections[number]) => {
+    const url = new URL(window.location.href);
+    if (section === 'tasks') url.searchParams.delete('section');
+    else url.searchParams.set('section', section);
+    window.history.replaceState({}, '', url);
+  };
+  $currentSection.subscribe((section) => {
+    syncSectionUrl(section);
+    updateMainContent();
+  });
+  window.addEventListener('popstate', () => {
+    const section = new URL(window.location.href).searchParams.get('section');
+    $currentSection.set(section && validSections.includes(section as typeof validSections[number])
+      ? section as typeof validSections[number]
+      : 'tasks');
+  });
   
   // Initial updates
   updateDensity();

@@ -281,6 +281,9 @@
 .bg-theme-accent { background-color: var(--accent); }
 .text-theme-accent { color: var(--accent); }
 .border-theme-border { border-color: var(--border); }
+.divide-theme-border > :not(:last-child) {
+  border-color: color-mix(in srgb, var(--border) 55%, transparent) !important;
+}
 
 /* Global typography using dynamic variables */
 html {
@@ -292,6 +295,12 @@ body {
   font-family: var(--font-family);
   color: var(--text);
   background-color: var(--bg);
+}
+
+button:not(:disabled),
+[role='button'],
+a[href] {
+  cursor: pointer;
 }
 
 /* Density utilities */
@@ -368,7 +377,7 @@ select:focus {
 
 /* Border opacity adjustments */
 .border-theme-border {
-  border-color: rgba(223, 230, 233, var(--border-opacity)) !important;
+  border-color: var(--border) !important;
 }
 
 /* Text contrast adjustments */

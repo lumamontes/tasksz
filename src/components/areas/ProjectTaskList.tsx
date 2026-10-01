@@ -17,7 +17,7 @@ export function ProjectTaskList({ tasks, label }: { tasks: Task[]; label: string
             <button
               type="button"
               onClick={() => openProjectTask(task.id)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-theme-sidebar focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme-accent"
+               className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left hover:bg-theme-sidebar focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme-accent"
             >
               <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${completed ? 'border-theme-accent bg-theme-accent text-white' : 'border-theme-border'}`} aria-hidden="true">
                 {completed && <Check className="h-3 w-3" />}

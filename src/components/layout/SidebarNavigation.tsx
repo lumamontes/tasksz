@@ -50,9 +50,12 @@ export function SidebarNavigation() {
             aria-label={section.label}
             title={collapsed ? section.label : undefined}
             className={`
-              w-full flex items-center gap-2.5 rounded-md text-sm font-medium
+              w-full flex cursor-pointer items-center gap-2.5 rounded-md text-sm font-medium
               transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent
               px-3 py-2 sidebar-nav-button
+              ${currentSection === section.id
+                ? 'bg-theme-bg text-theme-text'
+                : 'text-theme-muted hover:bg-theme-bg hover:text-theme-text'}
             `}
           >
             <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />

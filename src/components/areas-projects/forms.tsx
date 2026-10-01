@@ -8,6 +8,7 @@ import { useStore } from '@nanostores/react';
 import { useForm, type FieldValues, type UseFormRegisterReturn, type UseFormReturn } from 'react-hook-form';
 import {
   areaInputSchema,
+  AREA_COLOR_PRESETS,
   DEFAULT_AREA_COLOR,
   projectInputSchema,
   type AreaInput,
@@ -91,17 +92,34 @@ export function AreaForm({ defaultValues, onSubmit, onCancel, submitLabel = 'Sal
   });
   const submit = useSubmitWithRootError(form, onSubmit);
   const { errors, isSubmitting } = form.formState;
+  const selectedColor = form.watch('color');
 
   return (
     <form onSubmit={submit} className="space-y-5" noValidate>
       <TextField id="area-name" label="Nome da área" autoFocus maxLength={120} placeholder="Ex.: Trabalho" error={errors.name?.message} registration={form.register('name')} />
       <TextField id="area-description" label="Descrição" optional maxLength={160} placeholder="Ex.: Onde ficam suas responsabilidades profissionais" error={errors.description?.message} registration={form.register('description')} />
       <div>
-        <label htmlFor="area-color" className="mb-1.5 block text-sm font-medium text-theme-text">Cor da área</label>
-        <div className="flex items-center gap-3">
-          <input id="area-color" {...form.register('color')} type="color" aria-describedby="area-color-hint" className="h-10 w-12 cursor-pointer rounded-lg border border-theme-border bg-theme-bg p-1" />
-          <span id="area-color-hint" className="text-xs text-theme-muted">Use uma cor para reconhecer esta área de relance.</span>
+        <p className="mb-2 text-sm font-medium text-theme-text">Cor da área</p>
+        <div className="flex flex-wrap gap-2" aria-label="Cores sugeridas">
+          {AREA_COLOR_PRESETS.map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              onClick={() => form.setValue('color', preset.value, { shouldDirty: true, shouldValidate: true })}
+              aria-label={`Usar cor ${preset.name}`}
+              aria-pressed={selectedColor === preset.value}
+              title={preset.name}
+              className={`h-8 w-8 cursor-pointer rounded-full border-2 p-0.5 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent focus-visible:ring-offset-2 ${selectedColor === preset.value ? 'border-theme-text' : 'border-transparent'}`}
+            >
+              <span className="block h-full w-full rounded-full" style={{ backgroundColor: preset.value }} aria-hidden="true" />
+            </button>
+          ))}
+          <label htmlFor="area-color" className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-theme-border px-2 text-xs text-theme-muted hover:border-theme-accent hover:text-theme-text">
+            <input id="area-color" {...form.register('color')} type="color" aria-describedby="area-color-hint" className="h-5 w-5 cursor-pointer rounded-full border-0 bg-transparent p-0" />
+            Personalizar
+          </label>
         </div>
+        <p id="area-color-hint" className="mt-2 text-xs text-theme-muted">Escolha uma sugestão ou personalize a cor.</p>
         {errors.color?.message && <p className="mt-1 text-xs text-red-600" role="alert">{errors.color.message}</p>}
       </div>
       <FormFooter rootError={errors.root?.message} submitting={isSubmitting} submitLabel={submitLabel} onCancel={onCancel} />

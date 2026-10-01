@@ -123,6 +123,16 @@ export interface Task {
   };
 }
 
+export interface TaskDraftSnapshot {
+  title: string;
+  description: string;
+  scheduledDate?: string;
+  startDate?: string;
+  endDate?: string;
+  projectId?: string;
+  newSubtasks: string[];
+}
+
 // New types for the app structure
 export type Section = 'tasks' | 'areas' | 'configuracoes';
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Area, Project, Task } from '../types';
 import {
   areaOfTask,
+  taskOrganizationLabels,
   countActiveTasksByProject,
   countActiveTasksInArea,
   projectAfterAreaChange,
@@ -67,6 +68,15 @@ describe('task area', () => {
     expect(projectAfterAreaChange(site.id, work.id, projects)).toBe(site.id);
     expect(projectAfterAreaChange(site.id, home.id, projects)).toBeUndefined();
     expect(projectAfterAreaChange(site.id, undefined, projects)).toBeUndefined();
+  });
+
+  it('derives badge labels for a task organization', () => {
+    expect(taskOrganizationLabels(task('a', { projectId: site.id }), [work, home], [site])).toEqual({
+      areaName: work.name,
+      areaColor: work.color,
+      projectName: site.name,
+    });
+    expect(taskOrganizationLabels(task('b'), [work, home], [site])).toEqual({});
   });
 });
 

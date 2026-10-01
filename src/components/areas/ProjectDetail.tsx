@@ -2,6 +2,8 @@ import { useId, useState, type KeyboardEvent } from 'react';
 import type { Area, Project, Task } from '../../types';
 import type { ProjectTab } from '../../stores/areasSelectors';
 import { saveProject, setProjectTab, showAreaOverview } from '../../stores/areasWorkspaceStore';
+import { openNewTask } from '../../stores/uiStore';
+import { setCurrentSection } from '../../stores/settingsStore';
 import { ProjectForm } from '../areas-projects/forms';
 import { BackLink, EntityHeader } from '../areas-projects/ui';
 import { countLabel } from '../../utils/text';
@@ -30,6 +32,11 @@ export function ProjectDetail({ area, project, tab, tasks }: {
     const next = TABS[(index + (event.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
     setProjectTab(next.id);
     document.getElementById(`${tabsId}-${next.id}-tab`)?.focus();
+  };
+
+  const openTaskForm = () => {
+    setCurrentSection('tasks');
+    openNewTask({ projectId: project.id });
   };
 
   return (
@@ -82,7 +89,10 @@ export function ProjectDetail({ area, project, tab, tasks }: {
             ) : (
               <div className="rounded-xl border border-theme-border bg-theme-bg p-5">
                 <p className="text-sm text-theme-muted">Este projeto tem {countLabel(tasks.length, 'tarefa ativa', 'tarefas ativas')}.</p>
-                <button type="button" onClick={() => setProjectTab('tasks')} className="mt-4 rounded text-sm font-medium text-theme-accent hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent">Ver tarefas</button>
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <button type="button" onClick={openTaskForm} className="cursor-pointer rounded text-sm font-medium text-theme-accent hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent">Nova tarefa neste projeto</button>
+                  <button type="button" onClick={() => setProjectTab('tasks')} className="cursor-pointer rounded text-sm font-medium text-theme-muted hover:text-theme-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent">Ver tarefas</button>
+                </div>
               </div>
             )}
           </div>

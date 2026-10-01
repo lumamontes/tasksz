@@ -233,19 +233,18 @@ export function TaskDetailPanel({ taskId, navigationTasks, onSelectTask }: TaskD
           )}
         </div>
 
-        {/* Summary Strip */}
-        <TaskSummaryStrip task={selectedTask} />
-
-        {/* Content */}
-        <div className="py-6">
+         {/* Content */}
+         <div className="py-6">
           {/* Description - Primary */}
           <DescriptionSection key={`${selectedTask.id}-description`} task={selectedTask} isEditMode={isEditMode} />
 
           {/* Subtasks - Working Area */}
-          <SubtasksSection key={`${selectedTask.id}-subtasks`} task={selectedTask} subtasks={selectedTaskSubtasks} />
+           <SubtasksSection key={`${selectedTask.id}-subtasks`} task={selectedTask} subtasks={selectedTaskSubtasks} />
 
-          {/* Calendar - Optional */}
-          <CalendarSection task={selectedTask} />
+           <TaskSummaryStrip key={`${selectedTask.id}-organization`} task={selectedTask} />
+
+           {/* Calendar and date range */}
+           <CalendarSection task={selectedTask} />
         </div>
       </div>
 

@@ -48,7 +48,7 @@ export function showAreaList() {
 }
 
 export function showAreaOverview() {
-  patch({ view: 'overview', projectId: null, taskId: null });
+  patch({ view: 'overview', projectId: null, taskId: null, pane: 'detail' });
 }
 
 export function showAreaProjects() {

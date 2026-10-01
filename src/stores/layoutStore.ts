@@ -8,15 +8,25 @@ import { atom } from 'nanostores';
 export const MIN_LEFT_WIDTH = 300;
 export const MAX_LEFT_WIDTH = 640;
 export const DEFAULT_LEFT_WIDTH = 360;
+export const MIN_AREAS_PANEL_WIDTH = 280;
+export const MAX_AREAS_PANEL_WIDTH = 640;
+export const DEFAULT_AREAS_PANEL_WIDTH = 360;
 const STORAGE_KEY = 'task-panels-width';
+const AREAS_STORAGE_KEY = 'areas-panels-width';
 export const SIDEBAR_STORAGE_KEY = 'task-sidebar-collapsed';
 
 export const $leftPanelWidth = atom<number>(DEFAULT_LEFT_WIDTH);
+export const $areasPanelWidth = atom<number>(DEFAULT_AREAS_PANEL_WIDTH);
 export const $isResizing = atom<boolean>(false);
+export const $areasIsResizing = atom<boolean>(false);
 export const $sidebarCollapsed = atom<boolean>(false);
 
 function clampWidth(width: number): number {
   return Math.max(MIN_LEFT_WIDTH, Math.min(MAX_LEFT_WIDTH, width));
+}
+
+function clampAreasWidth(width: number): number {
+  return Math.max(MIN_AREAS_PANEL_WIDTH, Math.min(MAX_AREAS_PANEL_WIDTH, width));
 }
 
 export function loadLeftPanelWidth() {
@@ -43,9 +53,31 @@ export function setIsResizing(value: boolean) {
   $isResizing.set(value);
 }
 
+export function setAreasIsResizing(value: boolean) {
+  $areasIsResizing.set(value);
+}
+
 export function resetLeftPanelWidth() {
   $leftPanelWidth.set(DEFAULT_LEFT_WIDTH);
   saveLeftPanelWidth();
+}
+
+export function loadAreasPanelWidth() {
+  if (typeof window === 'undefined') return;
+  const saved = window.localStorage.getItem(AREAS_STORAGE_KEY);
+  if (saved) {
+    const width = parseInt(saved, 10);
+    if (width >= MIN_AREAS_PANEL_WIDTH && width <= MAX_AREAS_PANEL_WIDTH) $areasPanelWidth.set(width);
+  }
+}
+
+export function setAreasPanelWidth(width: number) {
+  $areasPanelWidth.set(clampAreasWidth(width));
+}
+
+export function saveAreasPanelWidth() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(AREAS_STORAGE_KEY, String($areasPanelWidth.get()));
 }
 
 export function loadSidebarCollapsed() {

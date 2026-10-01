@@ -30,6 +30,22 @@ export function areaOfTask(task: Pick<Task, 'projectId'>, projects: Project[]): 
   return task.projectId ? projects.find((project) => project.id === task.projectId)?.areaId : undefined;
 }
 
+export interface TaskOrganizationLabels {
+  areaName?: string;
+  areaColor?: string;
+  projectName?: string;
+}
+
+export function taskOrganizationLabels(task: Pick<Task, 'projectId'>, areas: Area[], projects: Project[]): TaskOrganizationLabels {
+  const project = task.projectId ? projects.find((item) => item.id === task.projectId) : undefined;
+  const area = project?.areaId ? areas.find((item) => item.id === project.areaId) : undefined;
+  return {
+    areaName: area?.name,
+    areaColor: area?.color,
+    projectName: project?.name,
+  };
+}
+
 /** Choosing another Area drops a Project that lives outside it. */
 export function projectAfterAreaChange(projectId: string | undefined, nextAreaId: string | undefined, projects: Project[]): string | undefined {
   if (!projectId || !nextAreaId) return undefined;

@@ -13,17 +13,23 @@
 
 import { AreaListPanel } from './AreaListPanel';
 import { AreaDetailPane } from './AreaDetailPane';
+import { AreasPanelWidth } from './AreasPanelWidth';
+import { ResizableHandle } from '../ui/ResizableHandle';
 ---
 
 <section data-section="areas" class="h-full bg-theme-panel" aria-labelledby="areas-title">
   <div data-areas-shell class="flex h-full min-h-0 overflow-hidden">
-    <nav data-areas-list class="flex w-full shrink-0 flex-col border-theme-border bg-theme-bg lg:w-72 lg:border-r xl:w-[22rem]" aria-labelledby="areas-title">
+    <AreasPanelWidth client:only="react" />
+    <nav data-areas-list class="flex w-full shrink-0 flex-col border-theme-border bg-theme-sidebar lg:border-r" aria-labelledby="areas-title">
       <header class="px-5 pt-5 pb-4">
-        <p class="text-xs font-medium uppercase tracking-widest text-theme-muted">Workspace</p>
-        <h1 id="areas-title" class="mt-1 text-xl font-semibold text-theme-text">Áreas</h1>
+        <h1 id="areas-title" class="text-xl font-semibold text-theme-text">Áreas</h1>
+        <p class="mt-1 text-sm text-theme-muted">Organize projetos por contexto.</p>
       </header>
       <AreaListPanel client:only="react" />
-    </nav>
+      </nav>
+    <div data-areas-resize-handle class="hidden lg:block">
+      <ResizableHandle area client:only="react" />
+    </div>
     <div data-areas-detail class="min-w-0 flex-1 overflow-y-auto">
       <AreaDetailPane client:only="react" />
     </div>
@@ -35,6 +41,16 @@ import { AreaDetailPane } from './AreaDetailPane';
     [data-areas-shell]:has([data-areas-pane='detail']) [data-areas-list],
     [data-areas-shell]:has([data-areas-pane='list']) [data-areas-detail] {
       display: none;
+    }
+  }
+
+  [data-areas-list] {
+    width: var(--areas-panel-width, 22rem);
+  }
+
+  @media (max-width: 1023px) {
+    [data-areas-list] {
+      width: 100%;
     }
   }
 </style>
