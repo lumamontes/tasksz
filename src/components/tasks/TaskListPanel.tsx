@@ -908,7 +908,7 @@ export function TaskListPanel({
                       {selectionMode && (
                         <button
                           type="button"
-                          aria-checked={isMultiSelected}
+                          aria-pressed={isMultiSelected}
                           aria-label={
                             isMultiSelected
                               ? "Remover da seleção"

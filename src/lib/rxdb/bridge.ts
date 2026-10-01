@@ -140,12 +140,17 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
   const accountDraft = await db.drafts
     .findOne({ selector: { id: taskDraftId(accountId) } })
     .exec();
+  const legacyDraft = await db.drafts
+    .findOne({ selector: { id: LEGACY_TASK_DRAFT_ID } })
+    .exec();
+  const draftToMigrate = guestDraft ?? legacyDraft;
 
   await Promise.all([
     db.tasks.bulkUpsert(
       withoutAccountCollision(tasks, accountTasks).map((t) => ({
         ...t.toJSON(),
         accountId,
+        createdBy: t.createdBy ?? accountId,
         _modified: nowIso(),
       })),
     ),
@@ -202,9 +207,9 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
         _modified: nowIso(),
       })),
     ),
-    !accountDraft && guestDraft
+    !accountDraft && draftToMigrate
       ? db.drafts.upsert({
-          ...guestDraft.toJSON(),
+          ...draftToMigrate.toJSON(),
           id: taskDraftId(accountId),
           accountId,
           updatedAt: nowIso(),
@@ -224,6 +229,7 @@ export async function rekeyToAccount(accountId: string): Promise<void> {
     ...areaCollisions.map((area) => area.remove()),
     ...projectCollisions.map((project) => project.remove()),
     ...(guestDraft ? [guestDraft.remove()] : []),
+    ...(legacyDraft ? [legacyDraft.remove()] : []),
   ]);
 }
 

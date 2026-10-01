@@ -25,6 +25,11 @@ let draftWrite = Promise.resolve();
 export const $taskForm = atom<TaskFormState | null>(null);
 export const $taskDraft = atom<TaskDraftSnapshot | null>(null);
 
+export function resetTaskDraftState() {
+  $taskDraft.set(null);
+  $taskForm.set(null);
+}
+
 export async function restoreTaskDraft() {
   const draft = await rxLoadTaskDraft();
   if (draft) {
