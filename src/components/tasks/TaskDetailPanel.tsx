@@ -41,6 +41,7 @@ export function TaskDetailPanel({ taskId, navigationTasks, onSelectTask }: TaskD
   const [isEditMode, setIsEditMode] = useState(false);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [showSavedHint, setShowSavedHint] = useState(false);
+  const [mutationError, setMutationError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const { requestConfirm, confirmDialog } = useConfirmDialog();
 
@@ -161,7 +162,8 @@ export function TaskDetailPanel({ taskId, navigationTasks, onSelectTask }: TaskD
     if (!undoAction) return;
 
     if (undoAction.type === 'archive') {
-      updateTask(undoAction.taskId, { archived: undoAction.taskData.archived });
+      void updateTask(undoAction.taskId, { archived: undoAction.taskData.archived })
+        .catch(() => setMutationError('Não foi possível desfazer a ação. Tente novamente.'));
     } else if (undoAction.type === 'delete') {
       // Deleting a task also removes its subtasks, so restore it here
       // (subtasks would need to be restored too — prevented via confirm).
@@ -215,7 +217,12 @@ export function TaskDetailPanel({ taskId, navigationTasks, onSelectTask }: TaskD
           <TaskDetailTopBar
             task={selectedTask}
             isCompleted={isTaskCompleted(selectedTask.id, selectedTask, selectedTaskSubtasks)}
-            onToggleCompleted={() => toggleTaskCompleted(selectedTask.id)}
+            onToggleCompleted={() => {
+              setMutationError('');
+              void toggleTaskCompleted(selectedTask.id).catch(() => {
+                setMutationError('Não foi possível atualizar a tarefa. Tente novamente.');
+              });
+            }}
             isEditMode={isEditMode}
             onEditModeChange={setIsEditMode}
             onArchive={handleArchive}
@@ -226,6 +233,7 @@ export function TaskDetailPanel({ taskId, navigationTasks, onSelectTask }: TaskD
             canGoPrev={selectedTaskIndex > 0}
             canGoNext={selectedTaskIndex >= 0 && selectedTaskIndex < navigationTasks.length - 1}
           />
+          {mutationError && <p className="px-6 py-2 text-sm text-theme-danger" role="alert">{mutationError}</p>}
           {showSavedHint && (
             <div className="absolute top-16 right-6 bg-theme-accent text-white px-3 py-1.5 rounded-lg text-xs font-medium opacity-0 animate-[fadeIn_0.3s_ease-out_forwards]">
               Salvo

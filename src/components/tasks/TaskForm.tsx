@@ -137,7 +137,7 @@ export function TaskForm() {
 
     try {
       if (editingTask) {
-        updateTask(editingTask.id, data);
+        await updateTask(editingTask.id, data);
       } else {
         let newTaskId: string;
         newTaskId = await addTask(data);

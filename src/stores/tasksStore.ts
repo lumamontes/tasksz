@@ -22,6 +22,7 @@ import {
   rxRemoveSubtasksForTask,
 } from '../lib/rxdb/bridge';
 import { isTaskCompletedValue } from '../domain/tasks/completion';
+import { isValidTaskDateRange } from '../domain/tasks/schemas';
 
 // Core state atoms
 export const $tasks = atom<Task[]>([]);
@@ -158,20 +159,24 @@ export async function addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' 
   return newTask.id;
 }
 
-export function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) {
+export async function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) {
   const tasks = $tasks.get();
   const target = tasks.find(task => task.id === id);
-  if (!target) return;
+  if (!target) return false;
   
   const updated: Task = { ...target, ...updates, updatedAt: new Date() };
-  void rxUpdateTask(id, updated);
+  if (!isValidTaskDateRange(updated.startDate, updated.endDate)) {
+    throw new Error('A data de início deve ser anterior ou igual à data de fim.');
+  }
+  await rxUpdateTask(id, updated);
+  return true;
 }
 
 /** Assigns or clears the task's Project, writing (and syncing) only real changes. */
 export function setTaskProject(id: string, projectId: string | undefined) {
   const target = $tasks.get().find((task) => task.id === id);
   if (!target || target.projectId === projectId) return;
-  updateTask(id, { projectId });
+  return updateTask(id, { projectId });
 }
 
 export function deleteTask(id: string) {
@@ -288,19 +293,20 @@ export function toggleSubtaskDone(id: string) {
 }
 
 /** Completes the task as a whole and keeps its subtasks visually consistent. */
-export function toggleTaskCompleted(taskId: string) {
+export async function toggleTaskCompleted(taskId: string) {
   const task = $tasks.get().find((item) => item.id === taskId);
   if (!task) return;
 
   const nextCompleted = !isTaskCompleted(taskId, task);
-  updateTask(taskId, { completed: nextCompleted });
+  await updateTask(taskId, { completed: nextCompleted });
 
   const subtasks = $subtasks.get().filter((subtask) => subtask.taskId === taskId);
-  for (const subtask of subtasks) {
+  await Promise.all(subtasks.map((subtask) => {
     if (subtask.done !== nextCompleted) {
-      void rxUpdateSubtask(subtask.id, { ...subtask, done: nextCompleted, updatedAt: new Date() });
+      return rxUpdateSubtask(subtask.id, { ...subtask, done: nextCompleted, updatedAt: new Date() });
     }
-  }
+    return undefined;
+  }));
 }
 
 export function reorderSubtasks(taskId: string, reorderedSubtasks: Subtask[]) {

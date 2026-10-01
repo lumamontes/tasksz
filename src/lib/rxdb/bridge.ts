@@ -731,15 +731,17 @@ export async function rxRemoveProject(id: string): Promise<void> {
 }
 
 export async function rxSaveSettings(settings: SettingsState): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
   const existing = await db.settings
-    .findOne({ selector: { accountId: getCurrentAccount() } })
+    .findOne({ selector: { accountId } })
     .exec();
-  const id = accountScopedId("settings");
+  if (accountId !== getCurrentAccount()) return;
+  const id = accountScopedId("settings", accountId);
   await db.settings.upsert({
     id,
     ...settingsToDoc(settings),
-    accountId: getCurrentAccount(),
+    accountId,
     _modified: nowIso(),
     _deleted: false,
   });
@@ -747,15 +749,17 @@ export async function rxSaveSettings(settings: SettingsState): Promise<void> {
 }
 
 export async function rxSaveProfile(user: UserState): Promise<void> {
+  const accountId = getCurrentAccount();
   const db = await getRxDb();
   const existing = await db.profile
-    .findOne({ selector: { accountId: getCurrentAccount() } })
+    .findOne({ selector: { accountId } })
     .exec();
-  const id = accountScopedId("profile");
+  if (accountId !== getCurrentAccount()) return;
+  const id = accountScopedId("profile", accountId);
   await db.profile.upsert({
     id,
     ...profileToDoc(user),
-    accountId: getCurrentAccount(),
+    accountId,
     _modified: nowIso(),
     _deleted: false,
   });

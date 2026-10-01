@@ -39,6 +39,7 @@ export function TaskDetailTopBar({
 }: TaskDetailTopBarProps) {
   const [titleValue, setTitleValue] = useState(task.title);
   const [copied, setCopied] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const handleCopyContent = async () => {
     try {
@@ -50,9 +51,15 @@ export function TaskDetailTopBar({
     }
   };
 
-  const handleTitleSave = () => {
+  const handleTitleSave = async () => {
     if (titleValue.trim()) {
-      updateTask(task.id, { title: titleValue.trim() });
+      setSaveError('');
+      try {
+        await updateTask(task.id, { title: titleValue.trim() });
+      } catch {
+        setSaveError('Não foi possível salvar o título. Tente novamente.');
+        return;
+      }
     } else {
       setTitleValue(task.title); // Reset if empty
     }
@@ -186,6 +193,7 @@ export function TaskDetailTopBar({
               </svg>
             </button>
           )}
+          {saveError && <p className="text-sm text-theme-danger" role="alert">{saveError}</p>}
         </div>
       </div>
 

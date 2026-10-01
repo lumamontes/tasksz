@@ -66,6 +66,8 @@ import {
   Copy,
   ArrowLeft,
   Archive,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { $areas } from "../../stores/areasStore";
 import { $projects } from "../../stores/projectsStore";
@@ -415,20 +417,7 @@ export function TaskListPanel({
       return;
     }
 
-    const reordered = [...visualTasks];
-    const [moved] = reordered.splice(dragIndex, 1);
-    reordered.splice(index, 0, moved);
-
-    // Persist the new relative order across the whole task list, keeping any
-    // tasks outside the current view (archived/other days) in their place.
-    const allTasks = $tasks.get();
-    const visibleIds = new Set(visualTasks.map((task) => task.id));
-    let visibleIndex = 0;
-    const ordered = allTasks.map((task) => {
-      if (!visibleIds.has(task.id)) return task;
-      return reordered[visibleIndex++];
-    });
-    reorderTasks(ordered);
+    moveTaskToIndex(dragIndex, index);
 
     setDragIndex(null);
     setDragOverIndex(null);
@@ -437,6 +426,21 @@ export function TaskListPanel({
   const handleDragEnd = () => {
     setDragIndex(null);
     setDragOverIndex(null);
+  };
+
+  const moveTaskToIndex = (from: number, to: number) => {
+    if (from === to || !visualTasks[from] || !visualTasks[to]) return;
+    const reordered = [...visualTasks];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+
+    // Persist relative order while keeping tasks outside the current view in place.
+    const visibleIds = new Set(visualTasks.map((task) => task.id));
+    let visibleIndex = 0;
+    reorderTasks($tasks.get().map((task) => {
+      if (!visibleIds.has(task.id)) return task;
+      return reordered[visibleIndex++];
+    }));
   };
 
   // ---- Multi-select batch actions ----
@@ -570,6 +574,7 @@ export function TaskListPanel({
                   $subtasks.get(),
                 );
                 const isMulti = selectedTaskIds.includes(task.id);
+                const visualIndex = visualTasks.findIndex((item) => item.id === task.id);
                 return (
                   <div key={task.id} className="flex items-center gap-2">
                     <button
@@ -599,8 +604,8 @@ export function TaskListPanel({
                             ? "bg-theme-sidebar border-theme-border text-theme-muted"
                             : "bg-theme-panel border-theme-border hover:border-theme-accent/50 text-theme-text"
                       }`}
-                    >
-                      <div className="flex items-center gap-2">
+                     >
+                       <div className="flex items-center gap-2">
                         <span
                           className={`flex-1 min-w-0 text-sm truncate ${
                             isCompleted ? "line-through" : ""
@@ -608,9 +613,29 @@ export function TaskListPanel({
                         >
                           {task.title}
                         </span>
-                      </div>
-                    </button>
-                  </div>
+                       </div>
+                     </button>
+                    <div className="flex shrink-0 flex-col">
+                      <button
+                        type="button"
+                        disabled={visualIndex <= 0}
+                        aria-label={`Mover ${task.title} para cima`}
+                        onClick={() => moveTaskToIndex(visualIndex, visualIndex - 1)}
+                        className="cursor-pointer rounded p-0.5 text-theme-muted hover:bg-theme-bg hover:text-theme-text disabled:cursor-not-allowed disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-theme-accent"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={visualIndex < 0 || visualIndex === visualTasks.length - 1}
+                        aria-label={`Mover ${task.title} para baixo`}
+                        onClick={() => moveTaskToIndex(visualIndex, visualIndex + 1)}
+                        className="cursor-pointer rounded p-0.5 text-theme-muted hover:bg-theme-bg hover:text-theme-text disabled:cursor-not-allowed disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-theme-accent"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                   </div>
                 );
               })}
             </div>
@@ -927,7 +952,9 @@ export function TaskListPanel({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleTaskCompleted(task.id);
+                           void toggleTaskCompleted(task.id).catch(() => {
+                             showNotice("Não foi possível atualizar a tarefa.");
+                           });
                         }}
                         aria-label={
                           isCompleted
@@ -1017,6 +1044,32 @@ export function TaskListPanel({
                             ? `${progress.completed}/${progress.total}`
                             : ""}
                         </span>
+                        <div className="flex shrink-0 flex-col">
+                          <button
+                            type="button"
+                            disabled={visualIndex === 0}
+                            aria-label={`Mover ${task.title} para cima`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveTaskToIndex(visualIndex, visualIndex - 1);
+                            }}
+                            className="cursor-pointer rounded p-0.5 text-theme-muted hover:bg-theme-bg hover:text-theme-text disabled:cursor-not-allowed disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-theme-accent"
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={visualIndex === visualTasks.length - 1}
+                            aria-label={`Mover ${task.title} para baixo`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveTaskToIndex(visualIndex, visualIndex + 1);
+                            }}
+                            className="cursor-pointer rounded p-0.5 text-theme-muted hover:bg-theme-bg hover:text-theme-text disabled:cursor-not-allowed disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-theme-accent"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

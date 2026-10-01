@@ -43,6 +43,8 @@ function enqueue(step: () => Promise<void>): Promise<void> {
 }
 
 async function runStart(accountId: string): Promise<void> {
+  // runStart already runs inside the lifecycle queue. Calling stopSync here
+  // would enqueue behind this function and deadlock while we await it.
   await runStop();
   const supabase = getSupabase();
   if (!supabase) return;

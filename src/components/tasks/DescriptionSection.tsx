@@ -17,12 +17,19 @@ export function DescriptionSection({ task, isEditMode }: DescriptionSectionProps
   const [isExpanded, setIsExpanded] = useState(!!task.description);
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(task.description || '');
+  const [error, setError] = useState('');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const cleanValue = value.trim() === '<p></p>' || value.trim() === '' 
       ? undefined 
       : value.trim();
-    updateTask(task.id, { description: cleanValue });
+    setError('');
+    try {
+      await updateTask(task.id, { description: cleanValue });
+    } catch {
+      setError('Não foi possível salvar a descrição. Tente novamente.');
+      return;
+    }
     setIsEditing(false);
     if (!cleanValue) {
       setIsExpanded(false);
@@ -76,6 +83,7 @@ export function DescriptionSection({ task, isEditMode }: DescriptionSectionProps
                   Cancelar
                 </button>
               </div>
+              {error && <p className="text-sm text-theme-danger" role="alert">{error}</p>}
             </div>
           ) : (
             <div>
