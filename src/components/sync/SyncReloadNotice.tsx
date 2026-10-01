@@ -13,7 +13,10 @@ export function SyncReloadNotice() {
        <span className="flex-1">Uma atualização está disponível.</span>
       <button
         type="button"
-        onClick={() => window.location.reload()}
+        onClick={() => {
+          dismissReloadRecommendation();
+          window.location.reload();
+        }}
         className="shrink-0 rounded-lg bg-theme-accent px-3 py-1.5 text-white hover:opacity-90"
       >
         Recarregar

@@ -1,0 +1,56 @@
+---
+/**
+ * AreasPage (Astro)
+ * Static two-pane shell for the Areas section. The list and the detail are
+ * separate islands that share selection through the Areas workspace store.
+ * Both render browser-local RxDB state, so server output cannot match and
+ * they use `client:only`.
+ *
+ * Below `lg` the shell shows one pane at a time. The detail island exposes the
+ * store's pane as `data-areas-pane`; CSS reads it with `:has()`, so pane
+ * switching needs no script.
+ */
+
+import { AreaListPanel } from './AreaListPanel';
+import { AreaDetailPane } from './AreaDetailPane';
+import { AreasPanelWidth } from './AreasPanelWidth';
+import { ResizableHandle } from '../ui/ResizableHandle';
+---
+
+<section data-section="areas" class="h-full bg-theme-panel" aria-labelledby="areas-title">
+  <div data-areas-shell class="flex h-full min-h-0 overflow-hidden">
+    <AreasPanelWidth client:only="react" />
+    <nav data-areas-list class="flex w-full shrink-0 flex-col border-theme-border bg-theme-sidebar lg:border-r" aria-labelledby="areas-title">
+      <header class="px-5 pt-5 pb-4">
+        <h1 id="areas-title" class="text-xl font-semibold text-theme-text">Áreas</h1>
+        <p class="mt-1 text-sm text-theme-muted">Organize projetos por contexto.</p>
+      </header>
+      <AreaListPanel client:only="react" />
+      </nav>
+    <div data-areas-resize-handle class="hidden lg:block">
+      <ResizableHandle area client:only="react" />
+    </div>
+    <div data-areas-detail class="min-w-0 flex-1 overflow-y-auto">
+      <AreaDetailPane client:only="react" />
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  @media (max-width: 1023px) {
+    [data-areas-shell]:has([data-areas-pane='detail']) [data-areas-list],
+    [data-areas-shell]:has([data-areas-pane='list']) [data-areas-detail] {
+      display: none;
+    }
+  }
+
+  [data-areas-list] {
+    width: var(--areas-panel-width, 22rem);
+  }
+
+  @media (max-width: 1023px) {
+    [data-areas-list] {
+      width: 100%;
+    }
+  }
+</style>

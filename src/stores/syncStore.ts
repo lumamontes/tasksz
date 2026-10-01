@@ -9,6 +9,7 @@
  */
 
 import { atom } from 'nanostores';
+import { APP_VERSION } from '../utils/constants';
 
 export interface SyncState {
   isSyncing: boolean;
@@ -47,9 +48,13 @@ export function setSyncError(error: string | null): void {
 }
 
 export function recommendReload(): void {
+  if (typeof window !== 'undefined' && window.sessionStorage.getItem(`tarefitas:reload-notice:${APP_VERSION}`)) return;
   $syncState.set({ ...$syncState.get(), reloadRecommended: true });
 }
 
 export function dismissReloadRecommendation(): void {
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.setItem(`tarefitas:reload-notice:${APP_VERSION}`, 'dismissed');
+  }
   $syncState.set({ ...$syncState.get(), reloadRecommended: false });
 }

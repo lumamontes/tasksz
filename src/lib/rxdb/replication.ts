@@ -9,6 +9,7 @@
 
 import { getSupabase } from '../supabase';
 import { getRxDb, startReplication, type ReplicationHandle } from './database';
+import { isExpectedSyncError, isPermanentSyncError, shouldRecommendReload, syncErrorMessage } from './syncErrors';
 import {
   dismissReloadRecommendation,
   recommendReload,
@@ -17,44 +18,34 @@ import {
 
 let active: ReplicationHandle | null = null;
 
-function isPermanentSyncError(error: unknown): boolean {
-  const value = error as { code?: unknown; message?: unknown } | null;
-  const code = String(value?.code ?? '');
-  const message = String(value?.message ?? error ?? '');
-  return (
-    /^PGRST\d+$/.test(code) ||
-    code === '42501' ||
-    code === '42703' ||
-    /failed to parse order|column .* does not exist|row-level security policy/i.test(message)
-  );
-}
-
-function isExpectedConflict(error: unknown): boolean {
-  const value = error as { code?: unknown; status?: unknown; message?: unknown } | null;
-  return (
-    String(value?.code ?? '') === '23505' ||
-    Number(value?.status) === 409 ||
-    /duplicate key value|unique constraint/i.test(String(value?.message ?? error ?? ''))
-  );
-}
-
-function shouldRecommendReload(error: unknown): boolean {
-  const value = error as { code?: unknown; message?: unknown } | null;
-  const code = String(value?.code ?? '');
-  const message = String(value?.message ?? error ?? '');
-  return (
-    code === '42703' ||
-    code === 'PGRST100' ||
-    /column .* does not exist|failed to parse (filter|order)/i.test(message)
-  );
-}
-
 /**
  * Start two-way sync for a signed-in user. Replaces any previous replication
  * (e.g. after switching accounts).
  */
-export async function startSyncForAccount(accountId: string): Promise<void> {
-  await stopSync();
+export function startSyncForAccount(accountId: string): Promise<void> {
+  return enqueue(() => runStart(accountId));
+}
+
+/**
+ * Stop all active replication. Safe to call multiple times.
+ */
+export function stopSync(): Promise<void> {
+  return enqueue(runStop);
+}
+
+// Start and stop run one at a time: two overlapping starts would create two
+// replications with the same Realtime channel names.
+let lifecycle: Promise<void> = Promise.resolve();
+
+function enqueue(step: () => Promise<void>): Promise<void> {
+  lifecycle = lifecycle.then(step, step);
+  return lifecycle;
+}
+
+async function runStart(accountId: string): Promise<void> {
+  // runStart already runs inside the lifecycle queue. Calling stopSync here
+  // would enqueue behind this function and deadlock while we await it.
+  await runStop();
   const supabase = getSupabase();
   if (!supabase) return;
 
@@ -62,11 +53,13 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
     const db = await getRxDb();
     void db; // database must exist; watcher already running at boot
     active = await startReplication(supabase, accountId);
-    const states = [active.tasks, active.subtasks, active.settings, active.profile];
+    const states = [active.tasks, active.subtasks, active.settings, active.profile, active.areas, active.projects];
     for (const state of states) {
-      state.error$.subscribe((err) => setSyncError(err?.message ?? 'Falha na sincronização.'));
       state.error$.subscribe((err) => {
-        if (!isExpectedConflict(err) && shouldRecommendReload(err)) {
+        // Conflicts and out-of-order inserts resolve on retry; do not alarm.
+        if (isExpectedSyncError(err)) return;
+        setSyncError(syncErrorMessage(err));
+        if (shouldRecommendReload(err)) {
           recommendReload();
         }
         if (isPermanentSyncError(err)) {
@@ -87,16 +80,15 @@ export async function startSyncForAccount(accountId: string): Promise<void> {
   }
 }
 
-/**
- * Stop all active replication. Safe to call multiple times.
- */
-export async function stopSync(): Promise<void> {
+async function runStop(): Promise<void> {
   if (!active) return;
   await Promise.allSettled([
     active.tasks.cancel(),
     active.subtasks.cancel(),
     active.settings.cancel(),
     active.profile.cancel(),
+    active.areas.cancel(),
+    active.projects.cancel(),
   ]);
   active = null;
 }

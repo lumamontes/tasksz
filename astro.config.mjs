@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://astro.build/config
 export default defineConfig({
+  // Lets test builds (e.g. the local Supabase suite) avoid overwriting dist/.
+  outDir: process.env.TAREFITAS_OUT_DIR || './dist',
   vite: {
     plugins: [tailwindcss()],
   },

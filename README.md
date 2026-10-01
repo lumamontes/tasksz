@@ -39,6 +39,24 @@ Abra `http://localhost:4321` no navegador.
 Sem configurar o Supabase, o aplicativo continua funcionando no modo local. A
 sincronização é opcional.
 
+### Testar a sincronização localmente
+
+Os testes de RLS e sincronização usam uma instância local do Supabase em Docker.
+Instale o [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
+e o Docker Desktop, depois execute:
+
+```bash
+supabase start
+supabase db query --local --file supabase/schema.sql
+pnpm exec playwright install chromium
+pnpm test:e2e:supabase
+supabase stop
+```
+
+Os testes criam contas descartáveis apenas na instância local. Eles cobrem
+isolamento por RLS, sincronização entre dispositivos, re-keying de dados
+convidados e escritas offline.
+
 ## Ativar a sincronização
 
 A sincronização usa o Supabase para que a mesma conta acesse os dados em mais de
@@ -127,6 +145,8 @@ Os componentes da interface não precisam conhecer os detalhes do Supabase.
 | `pnpm exec astro check` | Executa a verificação de tipos do Astro. |
 | `pnpm build` | Gera o build de produção em `dist/`. |
 | `pnpm preview` | Serve o build de produção localmente. |
+| `pnpm test:e2e` | Executa os testes de navegador sem Supabase. |
+| `pnpm test:e2e:supabase` | Executa os testes locais de RLS e sincronização. |
 
 ## Estrutura do projeto
 

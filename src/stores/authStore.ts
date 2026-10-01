@@ -7,12 +7,13 @@
  * so this module works (and stores nothing) when sync is not configured.
  */
 
-import { atom } from 'nanostores';
-import { getAuthProvider } from '../lib/auth';
-import type { AuthSession } from '../lib/auth/types';
-import { startSyncForAccount, stopSync } from '../lib/rxdb/replication';
-import { rekeyToAccount, setCurrentAccount } from '../lib/rxdb/bridge';
-import { trackEvent } from '../utils/analytics';
+import { atom } from "nanostores";
+import { getAuthProvider } from "../lib/auth";
+import type { AuthSession } from "../lib/auth/types";
+import { startSyncForAccount, stopSync } from "../lib/rxdb/replication";
+import { rekeyToAccount, setCurrentAccount } from "../lib/rxdb/bridge";
+import { resetTaskDraftState, restoreTaskDraft } from "./uiStore";
+import { trackEvent } from "../utils/analytics";
 
 export interface AuthState {
   isInitialized: boolean;
@@ -46,10 +47,32 @@ function setPartial(partial: Partial<AuthState>): void {
   $auth.set({ ...$auth.get(), ...partial });
 }
 
-async function applySession(session: AuthSession | null): Promise<void> {
+let sessionApplication: {
+  userId: string | null;
+  promise: Promise<void>;
+} | null = null;
+
+/**
+ * Sign-up and sign-in resolve while Supabase also emits the same session via
+ * `onAuthStateChange`. Reuse the in-flight application for the same user and
+ * queue a different one, so re-keying and replication never start twice.
+ */
+function applySession(session: AuthSession | null): Promise<void> {
+  const userId = session?.userId ?? null;
+  if (sessionApplication?.userId === userId) return sessionApplication.promise;
+  const previous = sessionApplication?.promise ?? Promise.resolve();
+  const promise = previous
+    .catch(() => undefined)
+    .then(() => runApplySession(session));
+  sessionApplication = { userId, promise };
+  return promise;
+}
+
+async function runApplySession(session: AuthSession | null): Promise<void> {
   if (!session) {
+    resetTaskDraftState();
     await stopSync();
-    setCurrentAccount('');
+    setCurrentAccount("");
     setPartial({
       userId: null,
       email: null,
@@ -66,12 +89,14 @@ async function applySession(session: AuthSession | null): Promise<void> {
     email: session.email,
     name: session.name,
   });
+  resetTaskDraftState();
 
   try {
     await rekeyToAccount(session.userId);
     await startSyncForAccount(session.userId);
+    await restoreTaskDraft();
   } catch (error) {
-    console.error('Failed to start account synchronization:', error);
+    console.error("Failed to start account synchronization:", error);
   }
 }
 
@@ -83,7 +108,7 @@ export function getAuthDisplayName(): string | null {
   const auth = $auth.get();
   if (!auth.userId) return null;
   if (auth.name?.trim()) return auth.name.trim();
-  if (auth.email) return auth.email.split('@')[0] || null;
+  if (auth.email) return auth.email.split("@")[0] || null;
   return null;
 }
 
@@ -103,7 +128,7 @@ function startAuthListener(): void {
       return;
     }
     void applySession(session).catch((error) => {
-      console.error('Failed to apply authentication change:', error);
+      console.error("Failed to apply authentication change:", error);
     });
   });
 }
@@ -135,47 +160,52 @@ async function runInitAuth(): Promise<void> {
   }
 }
 
-export async function signUpWithEmail(email: string, password: string): Promise<boolean> {
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+): Promise<boolean> {
   setPartial({ isSubmitting: true, error: null });
   try {
-    const { session, requiresEmailConfirmation } = await getAuthProvider().signUp(
-      email,
-      password,
-    );
+    const { session, requiresEmailConfirmation } =
+      await getAuthProvider().signUp(email, password);
     if (requiresEmailConfirmation || !session) {
       // Email confirmation required (depends on the auth provider's settings).
       setPartial({
         isSubmitting: false,
         error:
-          'Confirme seu e-mail para ativar a conta. Você já pode continuar usando o app localmente.',
+          "Confirme seu e-mail para ativar a conta. Você já pode continuar usando o app localmente.",
       });
       return false;
     }
     await applySession(session);
     setPartial({ isSubmitting: false });
-    trackEvent('sign_up');
+    trackEvent("sign_up");
     return true;
   } catch (err) {
     setPartial({
       isSubmitting: false,
-      error: err instanceof Error ? err.message : 'Não foi possível criar a conta.',
+      error:
+        err instanceof Error ? err.message : "Não foi possível criar a conta.",
     });
     return false;
   }
 }
 
-export async function signInWithEmail(email: string, password: string): Promise<boolean> {
+export async function signInWithEmail(
+  email: string,
+  password: string,
+): Promise<boolean> {
   setPartial({ isSubmitting: true, error: null });
   try {
     const session = await getAuthProvider().signIn(email, password);
     await applySession(session);
     setPartial({ isSubmitting: false });
-    trackEvent('sign_in');
+    trackEvent("sign_in");
     return true;
   } catch (err) {
     setPartial({
       isSubmitting: false,
-      error: err instanceof Error ? err.message : 'Não foi possível entrar.',
+      error: err instanceof Error ? err.message : "Não foi possível entrar.",
     });
     return false;
   }
@@ -184,7 +214,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
 export async function signInWithGoogle(): Promise<boolean> {
   setPartial({ isSubmitting: true, error: null });
   try {
-    await getAuthProvider().signInWithOAuth('google');
+    await getAuthProvider().signInWithOAuth("google");
     // OAuth redirects the browser away; the session is restored by
     // `initAuth()` -> `getSession()` when the user comes back.
     setPartial({ isSubmitting: false });
@@ -192,20 +222,31 @@ export async function signInWithGoogle(): Promise<boolean> {
   } catch (err) {
     setPartial({
       isSubmitting: false,
-      error: err instanceof Error ? err.message : 'Não foi possível entrar com o Google.',
+      error:
+        err instanceof Error
+          ? err.message
+          : "Não foi possível entrar com o Google.",
     });
     return false;
   }
 }
 
 export async function signOut(): Promise<void> {
+  // Signing back in as the same user must start a fresh session application.
+  sessionApplication = null;
   try {
     await getAuthProvider().signOut();
   } finally {
     await stopSync();
-    setCurrentAccount('');
-    setPartial({ userId: null, email: null, name: null, error: null, isModalOpen: false });
-    trackEvent('sign_out');
+    setCurrentAccount("");
+    setPartial({
+      userId: null,
+      email: null,
+      name: null,
+      error: null,
+      isModalOpen: false,
+    });
+    trackEvent("sign_out");
   }
 }
 

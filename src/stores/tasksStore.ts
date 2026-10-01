@@ -21,6 +21,8 @@ import {
   rxRemoveSubtask,
   rxRemoveSubtasksForTask,
 } from '../lib/rxdb/bridge';
+import { isTaskCompletedValue } from '../domain/tasks/completion';
+import { isValidTaskDateRange } from '../domain/tasks/schemas';
 
 // Core state atoms
 export const $tasks = atom<Task[]>([]);
@@ -66,9 +68,20 @@ export function getTaskProgress(taskId: string) {
   return { completed, total, percentage };
 }
 
+/** Keeps legacy tasks compatible while giving new tasks an explicit state. */
+export function isTaskCompleted(taskId: string, task?: Task, subtasks = $subtasks.get()): boolean {
+  return isTaskCompletedValue(task, subtasks.filter((subtask) => subtask.taskId === taskId));
+}
+
 // Whether a task belongs to a given day (scheduled date or recurring match)
 function matchesDay(task: Task, dateStr: string): boolean {
   if (task.scheduledDate === dateStr) return true;
+
+  if (task.startDate || task.endDate) {
+    const start = task.startDate || task.endDate;
+    const end = task.endDate || task.startDate;
+    if (start && end && dateStr >= start && dateStr <= end) return true;
+  }
 
   if (task.recurring) {
     if (task.recurring.type === 'daily') return true;
@@ -97,20 +110,18 @@ export const $filteredTasks = computed(
       if (matchesDay(task, selectedDay)) return true;
       // Unscheduled tasks are a rolling backlog: they stay visible on any day
       // (e.g. tasks created without a date reappear on the next day).
-      return !task.scheduledDate && !task.recurring;
+      return !task.scheduledDate && !task.startDate && !task.endDate && !task.recurring;
     });
 
     let result: Task[];
     if (filter === 'in-progress') {
       // Everything that isn't fully completed (no-subtask tasks count as active)
       result = dayTasks.filter((task) => {
-        const taskSubtasks = subtasks.filter((s) => s.taskId === task.id);
-        return !(taskSubtasks.length > 0 && taskSubtasks.every((s) => s.done));
+        return !isTaskCompleted(task.id, task, subtasks);
       });
     } else if (filter === 'completed') {
       result = dayTasks.filter((task) => {
-        const taskSubtasks = subtasks.filter((s) => s.taskId === task.id);
-        return taskSubtasks.length > 0 && taskSubtasks.every((s) => s.done);
+        return isTaskCompleted(task.id, task, subtasks);
       });
     } else {
       result = dayTasks;
@@ -119,12 +130,6 @@ export const $filteredTasks = computed(
     return result.slice().sort((a, b) => a.order - b.order);
   }
 );
-
-// Selected task index within filtered list
-export const $selectedTaskIndex = computed([$filteredTasks, $selectedTaskId], (filteredTasks, selectedId) => {
-  if (!selectedId) return -1;
-  return filteredTasks.findIndex(task => task.id === selectedId);
-});
 
 // Action to set filter
 export function setTaskFilter(filter: TaskFilter) {
@@ -154,33 +159,57 @@ export async function addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' 
   return newTask.id;
 }
 
-export function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) {
+export async function updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) {
   const tasks = $tasks.get();
   const target = tasks.find(task => task.id === id);
-  if (!target) return;
+  if (!target) return false;
   
   const updated: Task = { ...target, ...updates, updatedAt: new Date() };
-  void rxUpdateTask(id, updated);
+  if (!isValidTaskDateRange(updated.startDate, updated.endDate)) {
+    throw new Error('A data de início deve ser anterior ou igual à data de fim.');
+  }
+  await rxUpdateTask(id, updated);
+  return true;
+}
+
+/** Assigns or clears the task's Project, writing (and syncing) only real changes. */
+export function setTaskProject(id: string, projectId: string | undefined) {
+  const target = $tasks.get().find((task) => task.id === id);
+  if (!target || target.projectId === projectId) return;
+  return updateTask(id, { projectId });
 }
 
 export function deleteTask(id: string) {
-  void Promise.all([rxRemoveTask(id), rxRemoveSubtasksForTask(id)]);
-  
-  // Clear selection if deleted task was selected
-  if ($selectedTaskId.get() === id) {
+  return removeTasks([id]);
+}
+
+/** Deletes tasks with their subtasks. */
+export async function removeTasks(ids: string[]) {
+  await Promise.all(ids.flatMap((id) => [rxRemoveTask(id), rxRemoveSubtasksForTask(id)]));
+
+  // Clear selection if a deleted task was selected
+  const selectedId = $selectedTaskId.get();
+  if (selectedId && ids.includes(selectedId)) {
     $selectedTaskId.set(null);
   }
 }
 
-// Batch actions (multi-select support)
-export function archiveTasks(ids: string[], archived: boolean) {
+/** Keeps tasks in the task list without a Project. */
+export async function unassignTasksFromProject(ids: string[]) {
   const tasks = $tasks.get();
-  for (const id of ids) {
+  await Promise.all(ids.map((id) => {
+    const target = tasks.find((task) => task.id === id);
+    return target ? rxUpdateTask(id, { ...target, projectId: undefined, updatedAt: new Date() }) : undefined;
+  }));
+}
+
+// Batch actions (multi-select support)
+export async function archiveTasks(ids: string[], archived: boolean) {
+  const tasks = $tasks.get();
+  await Promise.all(ids.map((id) => {
     const target = tasks.find(task => task.id === id);
-    if (target) {
-      void rxUpdateTask(id, { ...target, archived, updatedAt: new Date() });
-    }
-  }
+    return target ? rxUpdateTask(id, { ...target, archived, updatedAt: new Date() }) : undefined;
+  }));
 }
 
 export function setTasksScheduledDate(ids: string[], date?: string) {
@@ -237,7 +266,7 @@ export function updateSubtask(id: string, updates: Partial<Omit<Subtask, 'id' | 
 }
 
 export function deleteSubtask(id: string) {
-  void rxRemoveSubtask(id);
+  return rxRemoveSubtask(id);
 }
 
 export function toggleSubtaskDone(id: string) {
@@ -261,6 +290,23 @@ export function toggleSubtaskDone(id: string) {
       });
     }
   }
+}
+
+/** Completes the task as a whole and keeps its subtasks visually consistent. */
+export async function toggleTaskCompleted(taskId: string) {
+  const task = $tasks.get().find((item) => item.id === taskId);
+  if (!task) return;
+
+  const nextCompleted = !isTaskCompleted(taskId, task);
+  await updateTask(taskId, { completed: nextCompleted });
+
+  const subtasks = $subtasks.get().filter((subtask) => subtask.taskId === taskId);
+  await Promise.all(subtasks.map((subtask) => {
+    if (subtask.done !== nextCompleted) {
+      return rxUpdateSubtask(subtask.id, { ...subtask, done: nextCompleted, updatedAt: new Date() });
+    }
+    return undefined;
+  }));
 }
 
 export function reorderSubtasks(taskId: string, reorderedSubtasks: Subtask[]) {
@@ -290,6 +336,10 @@ export function getTasksForDate(dateStr: string): Task[] {
     if (task.scheduledDate === dateStr) {
       return true;
     }
+
+    const rangeStart = task.startDate || task.endDate;
+    const rangeEnd = task.endDate || task.startDate;
+    if (rangeStart && rangeEnd && dateStr >= rangeStart && dateStr <= rangeEnd) return true;
     
     // Check if task is recurring and matches this date
     if (task.recurring) {

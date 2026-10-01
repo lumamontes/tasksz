@@ -1,14 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import AppShell from '../../components/layout/AppShell.astro';
-import { AppGuard } from '../../components/auth/AppGuard';
 
 const title = 'Tarefas - Tarefitas';
 const description = 'Gerencie suas tarefas de forma confortável e visual';
 ---
 
 <Layout title={title} description={description}>
-  <AppGuard client:load>
-    <AppShell />
-  </AppGuard>
+  <AppShell />
 </Layout>

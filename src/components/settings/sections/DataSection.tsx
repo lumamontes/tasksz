@@ -5,19 +5,26 @@
 
 import { useStore } from '@nanostores/react';
 import { $tasks, $subtasks } from '../../../stores/tasksStore';
+import { $areas } from '../../../stores/areasStore';
+import { $projects } from '../../../stores/projectsStore';
 import { $settings, resetSettings } from '../../../stores/settingsStore';
-import { useState } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
+import { useConfirmDialog } from '../../ui/ConfirmDialog';
+import { countLabel } from '../../../utils/text';
 import { rxImportBackup, rxClearAllData } from '../../../lib/rxdb/bridge';
-import type { Task, Subtask } from '../../../types';
+import type { Area, Project, Task, Subtask } from '../../../types';
 import type { SettingsState } from '../../../stores/settingsStore';
 
 export function DataSection() {
   const tasks = useStore($tasks);
   const subtasks = useStore($subtasks);
+  const areas = useStore($areas);
+  const projects = useStore($projects);
   const settings = useStore($settings);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const { requestConfirm, confirmDialog } = useConfirmDialog();
+  const summarize = (taskCount: number, areaCount: number, projectCount: number) =>
+    `${countLabel(taskCount, 'tarefa', 'tarefas')}, ${countLabel(areaCount, 'área', 'áreas')} e ${countLabel(projectCount, 'projeto', 'projetos')}`;
   const themeLabels: Record<SettingsState['themeId'], string> = {
     'calm-beige': 'Bege calmo',
     'high-contrast': 'Alto contraste',
@@ -28,12 +35,16 @@ export function DataSection() {
   const isValidBackup = (data: unknown): data is {
     tasks?: Task[];
     subtasks?: Subtask[];
+    areas?: Area[];
+    projects?: Project[];
     settings?: SettingsState;
   } => {
     if (!data || typeof data !== 'object') return false;
     const backup = data as Record<string, unknown>;
     if ('tasks' in backup && !Array.isArray(backup.tasks)) return false;
     if ('subtasks' in backup && !Array.isArray(backup.subtasks)) return false;
+    if ('areas' in backup && !Array.isArray(backup.areas)) return false;
+    if ('projects' in backup && !Array.isArray(backup.projects)) return false;
     if ('settings' in backup && backup.settings !== undefined &&
       (!backup.settings || typeof backup.settings !== 'object')) return false;
 
@@ -74,6 +85,8 @@ export function DataSection() {
       exportDate: new Date().toISOString(),
       tasks,
       subtasks,
+      areas,
+      projects,
       settings,
       meta: {
         totalTasks: tasks.length,
@@ -102,19 +115,27 @@ export function DataSection() {
       try {
         const data = JSON.parse(e.target?.result as string);
 
-         if (!isValidBackup(data) || (!data.tasks && !data.subtasks && !data.settings)) {
+          if (!isValidBackup(data) || (!data.tasks && !data.subtasks && !data.areas && !data.projects && !data.settings)) {
            alert('Arquivo de backup inválido. Verifique se o arquivo contém dados válidos do Tarefitas.');
            return;
          }
 
-        if (confirm('Isso irá substituir todos os seus dados atuais. Tem certeza que deseja continuar?')) {
-          const tasks = Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
-          const subtasks = Array.isArray(data.subtasks) ? (data.subtasks as Subtask[]) : [];
-          const settings = (data.settings as SettingsState | undefined);
+        const backupTasks = Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
+        const backupSubtasks = Array.isArray(data.subtasks) ? (data.subtasks as Subtask[]) : [];
+        const backupAreas = Array.isArray(data.areas) ? (data.areas as Area[]) : [];
+        const backupProjects = Array.isArray(data.projects) ? (data.projects as Project[]) : [];
+        const backupSettings = (data.settings as SettingsState | undefined);
 
-          await rxImportBackup({ tasks, subtasks, settings });
-          alert('Backup restaurado com sucesso!');
-        }
+        requestConfirm({
+          title: 'Substituir seus dados pelo backup?',
+          description: `Seus dados atuais (${summarize(tasks.length, areas.length, projects.length)}) serão substituídos pelo conteúdo de “${file.name}” (${summarize(backupTasks.length, backupAreas.length, backupProjects.length)}). Esta ação não pode ser desfeita.`,
+          confirmLabel: 'Substituir dados',
+          failureMessage: 'Não foi possível restaurar o backup. Seus dados atuais foram mantidos.',
+          onConfirm: async () => {
+            await rxImportBackup({ tasks: backupTasks, subtasks: backupSubtasks, areas: backupAreas, projects: backupProjects, settings: backupSettings });
+            alert('Backup restaurado com sucesso!');
+          },
+        });
       } catch (error) {
         console.error('Import failed:', error);
         alert('Erro ao ler o arquivo. Verifique se é um backup válido do Tarefitas.');
@@ -126,14 +147,15 @@ export function DataSection() {
     reader.readAsText(file);
   };
 
-  const resetAllData = async () => {
-    if (!showResetConfirm) {
-      setShowResetConfirm(true);
-      setTimeout(() => setShowResetConfirm(false), 10000); // Auto-cancel after 10s
-      return;
-    }
+  const resetAllData = () => requestConfirm({
+    title: 'Apagar todos os dados?',
+    description: `Isso remove ${countLabel(tasks.length, 'tarefa', 'tarefas')}, ${countLabel(subtasks.length, 'subtarefa', 'subtarefas')}, ${countLabel(areas.length, 'área', 'áreas')}, ${countLabel(projects.length, 'projeto', 'projetos')} e suas configurações. Esta ação não pode ser desfeita; faça um backup antes se quiser guardar alguma coisa.`,
+    confirmLabel: 'Apagar tudo',
+    failureMessage: 'Não foi possível apagar os dados.',
+    onConfirm: clearAllData,
+  });
 
-    setShowResetConfirm(false);
+  const clearAllData = async () => {
     await rxClearAllData();
     resetSettings();
 
@@ -186,7 +208,7 @@ export function DataSection() {
             <div className="flex-1">
               <div className="font-medium text-theme-text mb-2">Fazer backup dos seus dados</div>
               <div className="text-sm text-theme-muted mb-4">
-                Salva todas as suas tarefas, subtarefas e configurações em um arquivo JSON. 
+                 Salva suas tarefas, subtarefas, áreas, projetos e configurações em um arquivo JSON.
                 Recomendamos fazer backups regularmente.
               </div>
               <Button
@@ -247,20 +269,11 @@ export function DataSection() {
               </div>
               <Button
                 onClick={resetAllData}
-                variant={showResetConfirm ? 'primary' : 'secondary'}
-                className={
-                  showResetConfirm
-                    ? 'bg-red-700 hover:bg-red-800 text-white'
-                    : 'bg-red-100 text-red-700 hover:bg-red-200'
-                }
+                variant="secondary"
+                className="bg-red-100 text-red-700 hover:bg-red-200"
               >
-                {showResetConfirm ? 'Confirmar Reset' : 'Restaurar Padrões'}
+                Apagar todos os dados
               </Button>
-              {showResetConfirm && (
-                <p className="text-xs text-red-600 mt-2">
-                  Clique novamente para confirmar. Esta ação é irreversível.
-                </p>
-              )}
             </div>
           </div>
         </Card>
@@ -279,6 +292,7 @@ export function DataSection() {
         </Card>
       </div>
 
+      {confirmDialog}
     </div>
   );
 }

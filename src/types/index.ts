@@ -76,6 +76,27 @@ export interface Subtask {
   updatedAt: Date;
 }
 
+export interface Area {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Project {
+  id: string;
+  /** Private owner's Area assignment; nullable for legacy projects. */
+  areaId?: string;
+  name: string;
+  description?: string;
+  ownerId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Task {
   id: string;
   /** Account that originally created the task. */
@@ -90,16 +111,30 @@ export interface Task {
   updatedAt: Date;
   order: number;
   archived: boolean;
+  /** Explicit completion for new tasks; absent means legacy derived behavior. */
+  completed?: boolean;
   // Calendar associations
   scheduledDate?: string;        // YYYY-MM-DD (local date, no time)
+  startDate?: string;            // Optional range start, YYYY-MM-DD
+  endDate?: string;              // Optional range end, YYYY-MM-DD
   recurring?: {
     type: "daily" | "weekly";
     daysOfWeek?: number[];       // 0–6 (Sun–Sat), only for weekly
   };
 }
 
+export interface TaskDraftSnapshot {
+  title: string;
+  description: string;
+  scheduledDate?: string;
+  startDate?: string;
+  endDate?: string;
+  projectId?: string;
+  newSubtasks: string[];
+}
+
 // New types for the app structure
-export type Section = 'tasks' | 'configuracoes';
+export type Section = 'tasks' | 'areas' | 'configuracoes';
 
 export interface PomodoroSettings {
   focusMinutes: number;

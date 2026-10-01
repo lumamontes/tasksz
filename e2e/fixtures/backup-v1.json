@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "exportDate": "2026-09-10T12:00:00.000Z",
+  "tasks": [
+    {
+      "id": "task_legacy_1",
+      "title": "Tarefa antiga",
+      "description": "<p>Criada antes de áreas e projetos</p>",
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "order": 0,
+      "archived": false
+    }
+  ],
+  "subtasks": [
+    {
+      "id": "subtask_legacy_1",
+      "taskId": "task_legacy_1",
+      "title": "Passo antigo",
+      "done": true,
+      "order": 0,
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ],
+  "meta": { "totalTasks": 1, "totalSubtasks": 1, "appVersion": "1.0.0" }
+}

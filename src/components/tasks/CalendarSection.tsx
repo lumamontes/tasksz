@@ -1,96 +1,66 @@
 /**
  * CalendarSection Component
- * Simple optional date association for a task: pick a date or remove it.
+ * Live date editing with the same date picker and date fields as task creation.
  */
 
 import { useState } from 'react';
+import { addDays, formatDateLocal, getTodayString } from '../../utils/dateUtils';
 import { updateTask } from '../../stores/tasksStore';
 import type { Task } from '../../types';
+import { TaskDatePicker } from './TaskDatePicker';
 
-interface CalendarSectionProps {
-  task: Task;
-}
+export function CalendarSection({ task }: { task: Task }) {
+  const [error, setError] = useState('');
 
-export function CalendarSection({ task }: CalendarSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(!!task.scheduledDate);
-  const hasDate = !!task.scheduledDate;
-
-  if (!isExpanded) {
-    return (
-      <div className="mx-6 mb-6">
-        <button
-          onClick={() => setIsExpanded(true)}
-          aria-expanded={false}
-          className="w-full text-left px-4 py-2 text-sm text-theme-muted hover:text-theme-accent hover:bg-theme-sidebar rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent"
-        >
-          + Adicionar ao calendário
-        </button>
-      </div>
-    );
-  }
+  const saveDates = (updates: Pick<Task, 'scheduledDate' | 'startDate' | 'endDate'> & { recurring?: Task['recurring'] }) => {
+    const startDate = updates.startDate;
+    const endDate = updates.endDate;
+    if (startDate && endDate && startDate > endDate) {
+      setError('A data de início deve ser anterior ou igual à data de fim.');
+      return;
+    }
+    setError('');
+    void updateTask(task.id, updates).catch(() => {
+      setError('Não foi possível salvar a data. Tente novamente.');
+    });
+  };
 
   return (
-    <div className="mx-6 mb-6">
-      <button
-        onClick={() => setIsExpanded(false)}
-        aria-expanded={true}
-        className="flex items-center justify-between w-full mb-3 text-sm font-medium text-theme-text hover:text-theme-accent transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent rounded-lg p-1 -m-1"
-      >
-        <span>Data</span>
-        <svg
-          className="w-4 h-4 rotate-180 transition-transform"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      <div className="space-y-3 bg-theme-sidebar rounded-xl border border-theme-border p-4">
-        {hasDate && (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-theme-muted">
-              Agendada para{' '}
-              <time dateTime={task.scheduledDate}>
-                {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(
-                  new Date(`${task.scheduledDate}T00:00:00`)
-                )}
-              </time>
-            </p>
-            <button
-              onClick={() =>
-                updateTask(task.id, { scheduledDate: undefined, recurring: undefined })
-              }
-              className="px-3 py-1.5 text-xs font-medium text-theme-text bg-theme-bg border border-theme-border rounded-lg hover:border-red-600 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-600 shrink-0"
-            >
-              Remover
-            </button>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-theme-text mb-2" htmlFor={`${task.id}-scheduled-date`}>
-            Escolher data
-          </label>
-          <input
-            id={`${task.id}-scheduled-date`}
-            type="date"
-            value={task.scheduledDate || ''}
-            onChange={(e) => {
-              const dateStr = e.target.value;
-              if (dateStr) {
-                updateTask(task.id, {
-                  scheduledDate: dateStr,
-                  recurring: undefined,
-                });
-              }
-            }}
-            className="w-full px-4 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-accent focus:border-theme-accent"
-          />
+    <div className="mx-6 mb-6 rounded-xl border border-theme-border bg-theme-sidebar p-4">
+      <div>
+        <h3 className="text-sm font-medium text-theme-text">Quando?</h3>
+        <div className="mt-2 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => saveDates({ scheduledDate: getTodayString(), startDate: task.startDate, endDate: task.endDate, recurring: undefined })}
+            className="cursor-pointer rounded-lg border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-medium text-theme-text hover:border-theme-accent focus:outline-none focus:ring-2 focus:ring-theme-accent"
+          >Hoje</button>
+          <button
+            type="button"
+            onClick={() => saveDates({ scheduledDate: formatDateLocal(addDays(new Date(), 1)), startDate: task.startDate, endDate: task.endDate, recurring: undefined })}
+            className="cursor-pointer rounded-lg border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-medium text-theme-text hover:border-theme-accent focus:outline-none focus:ring-2 focus:ring-theme-accent"
+          >Amanhã</button>
         </div>
       </div>
-    </div>
+      <div className="mt-3">
+        <label className="mb-1.5 block text-sm font-medium text-theme-text" htmlFor={`${task.id}-scheduled-date`}>Data</label>
+        <TaskDatePicker
+          id={`${task.id}-scheduled-date`}
+          value={task.scheduledDate}
+           onChange={(scheduledDate) => saveDates({ scheduledDate, startDate: task.startDate, endDate: task.endDate, recurring: undefined })}
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-theme-text" htmlFor={`${task.id}-start-date`}>Início <span className="font-normal text-theme-muted">(opcional)</span></label>
+           <TaskDatePicker id={`${task.id}-start-date`} value={task.startDate} onChange={(startDate) => saveDates({ scheduledDate: task.scheduledDate, startDate, endDate: task.endDate })} />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-theme-text" htmlFor={`${task.id}-end-date`}>Fim <span className="font-normal text-theme-muted">(opcional)</span></label>
+           <TaskDatePicker id={`${task.id}-end-date`} value={task.endDate} onChange={(endDate) => saveDates({ scheduledDate: task.scheduledDate, startDate: task.startDate, endDate })} />
+         </div>
+       </div>
+       {error && <p className="mt-2 text-sm text-theme-danger" role="alert">{error}</p>}
+     </div>
   );
 }

@@ -10,6 +10,8 @@ import { taskToMarkdown } from '../../utils/taskFormat';
 
 interface TaskDetailTopBarProps {
   task: Task;
+  isCompleted: boolean;
+  onToggleCompleted: () => void;
   isEditMode: boolean;
   onEditModeChange: (enabled: boolean) => void;
   onArchive?: () => void;
@@ -23,6 +25,8 @@ interface TaskDetailTopBarProps {
 
 export function TaskDetailTopBar({
   task,
+  isCompleted,
+  onToggleCompleted,
   isEditMode,
   onEditModeChange,
   onArchive,
@@ -35,6 +39,7 @@ export function TaskDetailTopBar({
 }: TaskDetailTopBarProps) {
   const [titleValue, setTitleValue] = useState(task.title);
   const [copied, setCopied] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const handleCopyContent = async () => {
     try {
@@ -46,9 +51,15 @@ export function TaskDetailTopBar({
     }
   };
 
-  const handleTitleSave = () => {
+  const handleTitleSave = async () => {
     if (titleValue.trim()) {
-      updateTask(task.id, { title: titleValue.trim() });
+      setSaveError('');
+      try {
+        await updateTask(task.id, { title: titleValue.trim() });
+      } catch {
+        setSaveError('Não foi possível salvar o título. Tente novamente.');
+        return;
+      }
     } else {
       setTitleValue(task.title); // Reset if empty
     }
@@ -65,6 +76,14 @@ export function TaskDetailTopBar({
       <div className="flex items-center justify-between gap-4">
         {/* Title - Left */}
         <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+          <button
+            onClick={onToggleCompleted}
+            aria-label={isCompleted ? 'Marcar tarefa como não concluída' : 'Marcar tarefa inteira como concluída'}
+            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 focus:outline-none focus:ring-2 focus:ring-theme-accent ${isCompleted ? 'bg-theme-accent border-theme-accent text-white' : 'border-theme-border hover:border-theme-accent'}`}
+          >
+            {isCompleted && <span aria-hidden="true">✓</span>}
+          </button>
           {isEditMode ? (
             <div className="flex items-center gap-2">
               <input
@@ -98,6 +117,7 @@ export function TaskDetailTopBar({
               {task.title}
             </h1>
           )}
+          </div>
         </div>
 
         {/* Actions - Right */}
@@ -173,6 +193,7 @@ export function TaskDetailTopBar({
               </svg>
             </button>
           )}
+          {saveError && <p className="text-sm text-theme-danger" role="alert">{saveError}</p>}
         </div>
       </div>
 

@@ -23,8 +23,11 @@ create table if not exists public.projects (
   owner_id   text not null,
   created_by text not null,
   name       text not null,
+  description text not null default '',
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  _modified  timestamptz not null default now(),
+  _deleted   boolean not null default false
 );
 
 create table if not exists public.project_members (
@@ -142,6 +145,8 @@ create table if not exists public.tasks (
   sort_order   numeric not null default 0,
   archived     boolean not null default false,
   scheduled_date text,
+  start_date   text,
+  end_date     text,
   recurring    text,
 
   _modified timestamptz not null default now(),
@@ -211,6 +216,54 @@ create table if not exists public.subtasks (
   _modified timestamptz not null default now(),
   _deleted  boolean not null default false
 );
+
+-- ---------------------------------------------------------------------------
+-- Table: private areas
+-- ---------------------------------------------------------------------------
+create table if not exists public.areas (
+  id           text primary key,
+  account_id   text not null,
+  name         text not null,
+  description  text not null default '',
+  color        text,
+  sort_order   numeric not null default 0,
+  created_at   text not null,
+  _modified    timestamptz not null default now(),
+  _deleted     boolean not null default false
+);
+
+alter table public.areas enable row level security;
+
+drop policy if exists "users can read own areas" on public.areas;
+create policy "users can read own areas"
+  on public.areas for select using (auth.uid()::text = account_id);
+
+drop policy if exists "users can insert own areas" on public.areas;
+create policy "users can insert own areas"
+  on public.areas for insert with check (auth.uid()::text = account_id);
+
+drop policy if exists "users can update own areas" on public.areas;
+create policy "users can update own areas"
+  on public.areas for update using (auth.uid()::text = account_id)
+  with check (auth.uid()::text = account_id);
+
+-- Columns added by 20260920/20260921 migrations, kept here so a fresh
+-- install matches a migrated database.
+alter table public.tasks add column if not exists completed boolean;
+alter table public.projects add column if not exists area_id text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'projects_area_id_fkey'
+  ) then
+    alter table public.projects
+      add constraint projects_area_id_fkey
+      foreign key (area_id) references public.areas(id) on delete set null;
+  end if;
+end $$;
+
+create index if not exists projects_area_id_idx on public.projects(area_id);
 
 do $$
 begin
@@ -337,7 +390,7 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['tasks', 'subtasks', 'settings', 'profile']
+  foreach t in array array['tasks', 'subtasks', 'settings', 'profile', 'areas', 'projects']
   loop
     execute format($x$
       drop trigger if exists set_modified_trigger on public.%I;
@@ -375,7 +428,7 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['tasks', 'subtasks', 'settings', 'profile', 'projects', 'project_members']
+  foreach t in array array['tasks', 'subtasks', 'settings', 'profile', 'areas', 'projects', 'project_members']
   loop
     if not exists (
       select 1

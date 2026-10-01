@@ -9,6 +9,7 @@ import { $settings } from '../../stores/settingsStore';
 import { useStore } from '@nanostores/react';
 import type { Subtask } from '../../types';
 import { Check, X } from 'lucide-react';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
 
 interface SubtaskRowProps {
   subtask: Subtask;
@@ -21,7 +22,7 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
   const settings = useStore($settings);
   const [isEditing, setIsEditing] = useState(false);
   const [titleValue, setTitleValue] = useState(subtask.title);
-  const [showDelete, setShowDelete] = useState(false);
+  const { requestConfirm, confirmDialog } = useConfirmDialog();
 
   const handleSave = () => {
     if (titleValue.trim()) {
@@ -40,9 +41,13 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
   };
 
   const handleDelete = () => {
-    if (confirm('Tem certeza que deseja excluir esta subtarefa?')) {
-      deleteSubtask(subtask.id);
-    }
+    requestConfirm({
+      title: 'Excluir subtarefa?',
+      description: `“${subtask.title}” será excluída. Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir subtarefa',
+      failureMessage: 'Não foi possível excluir a subtarefa.',
+      onConfirm: () => deleteSubtask(subtask.id),
+    });
   };
 
   if (isEditing) {
@@ -83,14 +88,12 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
     <div
       data-subtask-id={subtask.id}
       className={`
-        flex items-center gap-3 p-3 rounded-lg border transition-colors
+        group flex items-center gap-3 p-3 rounded-lg border transition-colors
         ${isSelected ? 'bg-theme-accent/10 border-theme-accent' : 'bg-theme-sidebar border-theme-border'}
         ${subtask.done ? 'opacity-60' : ''}
         ${settings.reduceMotion ? '' : 'hover:bg-theme-bg'}
       `}
       onClick={onSelect}
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
       tabIndex={isSelected ? 0 : -1}
       role="button"
       aria-label={`Subtarefa: ${subtask.title}`}
@@ -131,16 +134,16 @@ export function SubtaskRow({ subtask, isSelected, isOverwhelmMode, onSelect }: S
           e.stopPropagation();
           handleDelete();
         }}
-        className={`
-          p-1 text-theme-muted hover:text-red-600 rounded transition-all shrink-0
-          ${showDelete ? 'opacity-100 visible' : 'opacity-0 invisible'}
-        `}
-        aria-label="Excluir subtarefa"
+        // Revealed on hover, keyboard focus and touch screens; never
+        // `invisible`, which would take it out of the tab order.
+        className="p-1 text-theme-muted hover:text-red-600 rounded transition-all shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 pointer-coarse:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        aria-label={`Excluir subtarefa ${subtask.title}`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       </button>
+      {confirmDialog}
     </div>
   );
 }

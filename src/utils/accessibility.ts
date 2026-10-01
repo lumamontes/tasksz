@@ -83,3 +83,10 @@ export function createSkipLink(targetId: string, text: string) {
 export function respectsReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
+/**
+ * Window-level shortcut handlers must ignore panels hidden by an inactive
+ * section or breakpoint, because several islands can mount the same panel.
+ */
+export function isRendered(element: Element | null): boolean {
+  return Boolean(element && element.getClientRects().length > 0);
+}

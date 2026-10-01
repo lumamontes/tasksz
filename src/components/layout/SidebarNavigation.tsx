@@ -14,15 +14,17 @@ import { useStore } from '@nanostores/react';
 import { $currentSection, setCurrentSection } from '../../stores/settingsStore';
 import { $sidebarCollapsed } from '../../stores/layoutStore';
 import type { Section } from '../../types';
-import { CheckSquare, Settings } from 'lucide-react';
+import { CheckSquare, Layers3, Settings } from 'lucide-react';
 
 const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: 'tasks', label: 'Tarefas' },
+  { id: 'areas', label: 'Áreas' },
   { id: 'configuracoes', label: 'Configurações' },
 ];
 
 const SECTION_ICONS = {
   tasks: CheckSquare,
+  areas: Layers3,
   configuracoes: Settings,
 } as const;
 
@@ -45,11 +47,15 @@ export function SidebarNavigation() {
             role="tab"
             aria-selected={currentSection === section.id}
             aria-controls={`${section.id}-panel`}
+            aria-label={section.label}
             title={collapsed ? section.label : undefined}
             className={`
-              w-full flex items-center gap-2.5 rounded-md text-sm font-medium
+              w-full flex cursor-pointer items-center gap-2.5 rounded-md text-sm font-medium
               transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent
               px-3 py-2 sidebar-nav-button
+              ${currentSection === section.id
+                ? 'bg-theme-bg text-theme-text'
+                : 'text-theme-muted hover:bg-theme-bg hover:text-theme-text'}
             `}
           >
             <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />

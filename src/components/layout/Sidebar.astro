@@ -25,7 +25,8 @@ import { SITE_METADATA } from '../../utils/constants';
 
   <!-- Blank space above the footer: login CTA / account status -->
   <div class="mt-auto px-6 py-4 flex flex-col items-center gap-2 sidebar-login-area">
-    <SidebarLoginCta client:load />
+    <!-- Depends on the restored auth session, which the server cannot know. -->
+    <SidebarLoginCta client:only="react" />
   </div>
 
   <!-- sidebar footer -->

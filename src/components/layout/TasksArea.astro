@@ -16,15 +16,15 @@ import { MobileTasks } from '../tasks/MobileTasks';
 <div data-section="tasks" class="h-full">
   <!-- Desktop: resizable 2-column layout -->
   <div class="hidden lg:flex h-full overflow-hidden">
-    <TaskListPanel desktopResizable={true} client:visible />
+    <TaskListPanel desktopResizable={true} client:only="react" />
     <ResizableHandle client:visible />
-    <div class="flex-1 min-w-0">
-      <TasksDetailPane client:visible />
+      <div class="flex-1 min-w-0 min-h-0">
+      <TasksDetailPane client:only="react" />
     </div>
   </div>
 
   <!-- Mobile: single column -->
   <div class="lg:hidden h-full">
-    <MobileTasks client:visible />
+    <MobileTasks client:only="react" />
   </div>
 </div>

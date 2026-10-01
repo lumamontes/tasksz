@@ -11,32 +11,54 @@
  * MB to GB, far beyond localStorage's ~5MB, with no extra setup cost.
  */
 
-import { createRxDatabase, addRxPlugin, type RxDatabase, type RxCollection } from 'rxdb/plugins/core';
-import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
-import { replicateSupabase, type RxSupabaseReplicationState } from 'rxdb/plugins/replication-supabase';
-import { RxDBMigrationPlugin } from 'rxdb/plugins/migration-schema';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  createRxDatabase,
+  addRxPlugin,
+  type RxDatabase,
+  type RxCollection,
+} from "rxdb/plugins/core";
+import { getRxStorageDexie } from "rxdb/plugins/storage-dexie";
+import {
+  replicateSupabase,
+  type RxSupabaseReplicationState,
+} from "rxdb/plugins/replication-supabase";
+import { RxDBMigrationPlugin } from "rxdb/plugins/migration-schema";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   TASK_SCHEMA,
   SUBTASK_SCHEMA,
   SETTINGS_SCHEMA,
   PROFILE_SCHEMA,
+  AREA_SCHEMA,
+  PROJECT_SCHEMA,
+  DRAFT_SCHEMA,
   type TaskDoc as TaskDocType,
   type SubtaskDoc as SubtaskDocType,
   type SettingsDoc as SettingsDocType,
   type ProfileDoc as ProfileDocType,
-} from './schema';
+  type AreaDoc as AreaDocType,
+  type ProjectDoc as ProjectDocType,
+  type DraftDoc as DraftDocType,
+} from "./schema";
+import { FIELD_NAMES } from "./fieldNames";
+import { createConflictHandler } from "./conflicts";
 
 export type TaskDoc = TaskDocType;
 export type SubtaskDoc = SubtaskDocType;
 export type SettingsDoc = SettingsDocType;
 export type ProfileDoc = ProfileDocType;
+export type AreaDoc = AreaDocType;
+export type ProjectDoc = ProjectDocType;
+export type DraftDoc = DraftDocType;
 
 export interface RxCollections {
   tasks: RxCollection<TaskDoc>;
   subtasks: RxCollection<SubtaskDoc>;
   settings: RxCollection<SettingsDoc>;
   profile: RxCollection<ProfileDoc>;
+  areas: RxCollection<AreaDoc>;
+  projects: RxCollection<ProjectDoc>;
+  drafts: RxCollection<DraftDoc>;
 }
 
 /**
@@ -48,35 +70,18 @@ export interface ReplicationHandle {
   subtasks: RxSupabaseReplicationState<SubtaskDoc>;
   settings: RxSupabaseReplicationState<SettingsDoc>;
   profile: RxSupabaseReplicationState<ProfileDoc>;
+  areas: RxSupabaseReplicationState<AreaDoc>;
+  projects: RxSupabaseReplicationState<ProjectDoc>;
 }
-
-const FIELD_NAMES = [
-  ['accountId', 'account_id'],
-  ['createdBy', 'created_by'],
-  ['projectId', 'project_id'],
-  ['assigneeId', 'assignee_id'],
-  ['createdAt', 'created_at'],
-  ['order', 'sort_order'],
-  ['scheduledDate', 'scheduled_date'],
-  ['taskId', 'task_id'],
-  ['themeId', 'theme_id'],
-  ['customPalette', 'custom_palette'],
-  ['fontId', 'font_id'],
-  ['fontScale', 'font_scale'],
-  ['showProgressBars', 'show_progress_bars'],
-  ['reduceMotion', 'reduce_motion'],
-  ['soundEnabled', 'sound_enabled'],
-  ['celebrationsEnabled', 'celebrations_enabled'],
-] as const;
 
 function mapFields<T extends object>(
   document: T,
-  direction: 'toServer' | 'toLocal',
+  direction: "toServer" | "toLocal",
 ): T {
   const mapped = { ...document } as Record<string, unknown>;
   for (const [localName, serverName] of FIELD_NAMES) {
-    const source = direction === 'toServer' ? localName : serverName;
-    const target = direction === 'toServer' ? serverName : localName;
+    const source = direction === "toServer" ? localName : serverName;
+    const target = direction === "toServer" ? serverName : localName;
     if (source in mapped) {
       mapped[target] = mapped[source];
       delete mapped[source];
@@ -86,18 +91,18 @@ function mapFields<T extends object>(
 }
 
 function toLocalDocument<T extends object>(document: T): T {
-  return mapFields(document, 'toLocal');
+  return mapFields(document, "toLocal");
 }
 
 function toServerDocument<T extends object>(document: T): T {
-  const mapped = mapFields(document, 'toServer') as Record<string, unknown>;
+  const mapped = mapFields(document, "toServer") as Record<string, unknown>;
   const accountId = mapped.account_id;
 
   // Older local documents used the shared `default` primary key. Normalize
   // those queued writes before they reach the account-scoped remote tables.
-  if (mapped.id === 'default' && typeof accountId === 'string' && accountId) {
-    if ('theme_id' in mapped) mapped.id = `${accountId}:settings`;
-    if ('name' in mapped) mapped.id = `${accountId}:profile`;
+  if (mapped.id === "default" && typeof accountId === "string" && accountId) {
+    if ("theme_id" in mapped) mapped.id = `${accountId}:settings`;
+    if ("name" in mapped) mapped.id = `${accountId}:profile`;
   }
 
   return mapped as T;
@@ -114,7 +119,7 @@ export function getRxDb(): Promise<RxDatabase<RxCollections>> {
 
   dbPromise = (async () => {
     const db = await createRxDatabase<RxCollections>({
-      name: 'tarefitas',
+      name: "tarefitas",
       storage: getRxStorageDexie(),
       multiInstance: true,
     });
@@ -122,16 +127,56 @@ export function getRxDb(): Promise<RxDatabase<RxCollections>> {
     await db.addCollections<RxCollections>({
       tasks: {
         schema: TASK_SCHEMA,
+        conflictHandler: createConflictHandler<TaskDoc>(toLocalDocument),
         migrationStrategies: {
           1: (oldDocument) => ({
             ...oldDocument,
-            createdBy: (oldDocument.createdBy ?? oldDocument.accountId) || undefined,
+            createdBy:
+              (oldDocument.createdBy ?? oldDocument.accountId) || undefined,
+          }),
+          2: (oldDocument) => ({ ...oldDocument }),
+          3: (oldDocument) => {
+            const migratedDocument = { ...oldDocument };
+            delete migratedDocument.areaId;
+            return migratedDocument;
+          },
+        },
+      },
+      subtasks: {
+        schema: SUBTASK_SCHEMA,
+        conflictHandler: createConflictHandler<SubtaskDoc>(toLocalDocument),
+      },
+      settings: {
+        schema: SETTINGS_SCHEMA,
+        conflictHandler: createConflictHandler<SettingsDoc>(toLocalDocument),
+      },
+      profile: {
+        schema: PROFILE_SCHEMA,
+        conflictHandler: createConflictHandler<ProfileDoc>(toLocalDocument),
+      },
+      areas: {
+        schema: AREA_SCHEMA,
+        conflictHandler: createConflictHandler<AreaDoc>(toLocalDocument),
+      },
+      projects: {
+        schema: PROJECT_SCHEMA,
+        conflictHandler: createConflictHandler<ProjectDoc>(toLocalDocument),
+        migrationStrategies: {
+          1: (oldDocument) => ({
+            ...oldDocument,
+            areaId: oldDocument.areaId || undefined,
           }),
         },
       },
-      subtasks: { schema: SUBTASK_SCHEMA },
-      settings: { schema: SETTINGS_SCHEMA },
-      profile: { schema: PROFILE_SCHEMA },
+      drafts: {
+        schema: DRAFT_SCHEMA,
+        migrationStrategies: {
+          1: (oldDocument) => ({
+            ...oldDocument,
+            accountId: oldDocument.accountId || "",
+          }),
+        },
+      },
     });
 
     cachedDb = db;
@@ -151,7 +196,7 @@ export function getRxDb(): Promise<RxDatabase<RxCollections>> {
  */
 export async function startReplication(
   supabase: SupabaseClient,
-  accountId: string
+  accountId: string,
 ): Promise<ReplicationHandle> {
   const db = await getRxDb();
   const baseId = `supabase-${accountId}`;
@@ -160,7 +205,8 @@ export async function startReplication(
     live: true,
     pull: {
       batchSize: 100,
-      queryBuilder: ({ query }: { query: any }) => query.eq('account_id', accountId),
+      queryBuilder: ({ query }: { query: any }) =>
+        query.eq("account_id", accountId),
       modifier: toLocalDocument,
     },
     push: { batchSize: 100, modifier: toServerDocument },
@@ -168,28 +214,60 @@ export async function startReplication(
 
   const tasks = replicateSupabase<TaskDoc>({
     replicationIdentifier: `${baseId}-tasks`,
-    tableName: 'tasks',
+    tableName: "tasks",
     collection: db.tasks,
     ...replicationOptions,
   });
   const subtasks = replicateSupabase<SubtaskDoc>({
     replicationIdentifier: `${baseId}-subtasks`,
-    tableName: 'subtasks',
+    tableName: "subtasks",
     collection: db.subtasks,
     ...replicationOptions,
   });
   const settings = replicateSupabase<SettingsDoc>({
     replicationIdentifier: `${baseId}-settings`,
-    tableName: 'settings',
+    tableName: "settings",
     collection: db.settings,
     ...replicationOptions,
   });
   const profile = replicateSupabase<ProfileDoc>({
     replicationIdentifier: `${baseId}-profile`,
-    tableName: 'profile',
+    tableName: "profile",
     collection: db.profile,
     ...replicationOptions,
   });
+  const areas = replicateSupabase<AreaDoc>({
+    replicationIdentifier: `${baseId}-areas`,
+    tableName: "areas",
+    collection: db.areas,
+    ...replicationOptions,
+  });
+  const projects = replicateSupabase<ProjectDoc>({
+    replicationIdentifier: `${baseId}-projects`,
+    tableName: "projects",
+    collection: db.projects,
+    ...replicationOptions,
+    pull: {
+      batchSize: 100,
+      queryBuilder: ({ query }: { query: any }) =>
+        query.eq("owner_id", accountId),
+      modifier: (document: ProjectDoc) => ({
+        ...toLocalDocument(document),
+        accountId,
+      }),
+    },
+    push: {
+      batchSize: 100,
+      modifier: (document: ProjectDoc) => {
+        const mapped = toServerDocument(document) as unknown as Record<
+          string,
+          unknown
+        >;
+        delete mapped.account_id;
+        return mapped as unknown as ProjectDoc;
+      },
+    },
+  });
 
-  return { tasks, subtasks, settings, profile };
+  return { tasks, subtasks, settings, profile, areas, projects };
 }

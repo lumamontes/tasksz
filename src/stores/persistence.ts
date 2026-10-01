@@ -12,10 +12,13 @@
  * localStorage.
  */
 
-import { getRxDb } from '../lib/rxdb/database';
-import { migrateLocalStorageToRxDb, watchRxDbToAtoms } from '../lib/rxdb/bridge';
-import { recommendReload } from './syncStore';
-import { atom } from 'nanostores';
+import { getRxDb } from "../lib/rxdb/database";
+import {
+  migrateLocalStorageToRxDb,
+  watchRxDbToAtoms,
+} from "../lib/rxdb/bridge";
+import { recommendReload } from "./syncStore";
+import { atom } from "nanostores";
 
 let setupPromise: Promise<void> | null = null;
 export const $persistenceReady = atom(false);
@@ -25,7 +28,7 @@ export const $persistenceReady = atom(false);
  * watcher that feeds the Nanostores atoms.
  */
 export async function setupPersistence(): Promise<void> {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   if (setupPromise) return setupPromise;
 
   setupPromise = (async () => {
@@ -35,7 +38,7 @@ export async function setupPersistence(): Promise<void> {
       await watchRxDbToAtoms();
       $persistenceReady.set(true);
     } catch (error) {
-      console.error('Failed to initialize local-first storage:', error);
+      console.error("Failed to initialize local-first storage:", error);
       if (/DB6|schema|migration/i.test(String(error))) recommendReload();
       $persistenceReady.set(true);
       setupPromise = null;
@@ -58,7 +61,7 @@ export function loadFromLocalStorage(): boolean {
 }
 
 export async function clearLocalStorage(): Promise<void> {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     const db = await getRxDb();
     await Promise.all([
@@ -66,9 +69,12 @@ export async function clearLocalStorage(): Promise<void> {
       db.subtasks.find().remove(),
       db.settings.find().remove(),
       db.profile.find().remove(),
+      db.areas.find().remove(),
+      db.projects.find().remove(),
+      db.drafts.find().remove(),
     ]);
   } catch (error) {
-    console.error('Failed to clear local-first storage:', error);
+    console.error("Failed to clear local-first storage:", error);
   }
 }
 
